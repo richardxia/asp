@@ -1,25 +1,37 @@
 import os
 import os.path
 import subprocess
-
+#how to do this without having to have this in here??
+from PyAvroInter import *
+            
 class ScalaFunction:
     def __init__(self, classname, source_dir):
         self.classname = classname
-        self.source_dir = source_dir
-
+        self.source_dir = source_dir                       
+    
     def __call__(self, *args, **kwargs):
-        # Should support more than just floats and lists of floats
-        result = subprocess.Popen(['scala', '-classpath', self.source_dir,
-                  self.classname] + [str(arg) for arg in args],
-                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+              
+        #print "INPUTS:", args         
+        write_avro_file(args)        
+        result = subprocess.Popen(['scala', '-classpath', self.source_dir + ":../../avroInter",
+                  self.classname], stdout=subprocess.PIPE)
         result.wait()
+        
         if result.returncode != 0:
             raise Error("Bad return code")
         output = result.communicate()[0]
-        nums = [float(x) for x in output.split()]
-        print nums
-        return nums
+        
+        results = read_avro_file()
+        #"""
+        for r in results:
+            print "RESULTS: ", r
+            print "TYPE: ", type(r)
+        #"""  
+        os.remove("args.avro")
+        os.remove("results.avro")
 
+
+        
 class PseudoModule:
     '''Pretends to be a Python module that contains the generated functions.'''
     def __init__(self):
@@ -71,7 +83,6 @@ class ScalaModule:
         source_string = self.generate()
         hex_checksum = self.calculate_hex_checksum(source_string)
         mod_cache_dir = os.path.join(cache_dir, hex_checksum)
-
         # Should we assume that if the directory exists, then we don't need to
         # recompile?
         if not os.path.isdir(mod_cache_dir):
@@ -81,9 +92,14 @@ class ScalaModule:
             source = open(filepath, 'w')
             source.write(source_string)
             source.close()
-            os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
+            #print "scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath)            
+            result = os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
+            
             os.remove(filepath)
-
+            if result != 0:
+                os.system("rm -rf " +  mod_cache_dir)
+                raise Exception("Could not compile")
+               
         mod = PseudoModule()
         for fname in self.init_body:
             self.func = ScalaFunction(fname, mod_cache_dir)
