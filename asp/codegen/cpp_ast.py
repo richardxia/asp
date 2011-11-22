@@ -28,6 +28,7 @@ class CNumber(Generable):
 class String(Generable):
     def __init__(self, text):
         self.text = text
+        self._fields = []
 
     def generate(self):
         yield '\"%s\"' % self.text
@@ -375,12 +376,59 @@ class Print(Generable):
     def __init__(self, text, newline):
         self.text = text
         self.newline = newline
+        self._fields = ['text']
 
     def generate(self, with_semicolon=True):
         if self.newline:
-            yield 'std::cout %s << std::endl;' % self.text
+            yield 'std::cout << %s << std::endl;' % self.text
         else:
-            yield 'std::cout %s;' % self.text
+            yield 'std::cout << %s;' % self.text
+
+class PrintCerr(Generable):
+    def __init__(self, newline, *text):
+        self.texts = text
+        self.newline = newline
+        self._fields = []
+
+    def generate(self, with_semicolon=True):
+        if self.newline:
+            texts = self.texts + ('std::endl',)
+        else:
+            texts = self.texts
+        yield 'std::cerr << ' + ' << '.join(map(lambda x: x.generate().next(), self.texts)) + ';'
+
+class PrintLog(Generable):
+    def __init__(self, outfile, texts, newline):
+        self.outfile = outfile
+        self.texts = texts
+        self.newline = newline
+        self._fields = ['texts']
+
+    def generate(self, with_semicolon=True):
+        yield self.outfile
+        for item in self.texts:
+            for item_line in item.generate():
+                yield ' << ' + item_line
+        if self.newline:
+            yield " << std::endl"
+        yield ";"
+
+    @classmethod
+    def write_log(cls, *args):
+        outputs = [String("_asp_log_write(")]
+        args = [String(x) if isinstance(x, str) else x for x in args]
+        for x in args[:]:
+            if isinstance(x, list):
+                i = args.index(x)
+                args[i:i+1] = x
+        if len(args) > 0:
+            outputs.append(args[0])
+        if len(args) > 1:
+            for arg in args[1:]:
+                outputs.append(String(', '))
+                outputs.append(arg)
+        outputs.append(String(')'))
+        return cls("_asp_log_file", outputs, True)
 
 class Compare(Generable):
     def __init__(self, left, op, right):

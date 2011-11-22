@@ -8,12 +8,14 @@ once when a stencil class is initialized.
 from stencil_model import *
 from assert_utils import *
 import ast
+import asp.codegen.python_ast as ast
 from asp.util import *
 
 # class to convert from Python AST to StencilModel
 class StencilPythonFrontEnd(ast.NodeTransformer):
-    def __init__(self):
+    def __init__(self, logging=False):
         super(StencilPythonFrontEnd, self).__init__()
+        self.logging = logging
 
     def parse(self, ast):
         return self.visit(ast)
@@ -38,6 +40,7 @@ class StencilPythonFrontEnd(ast.NodeTransformer):
         return StencilModel(map(lambda x: Identifier(x), self.input_arg_ids),
                             interior_kernels[0] if len(interior_kernels) > 0 else Kernel([]),
                             border_kernels[0] if len(border_kernels) > 0 else Kernel([]))
+                            #logging_kernels)
 
     def visit_arguments(self, node):
         assert node.vararg == None, 'kernel function may not take variable argument list'
@@ -79,15 +82,36 @@ class StencilPythonFrontEnd(ast.NodeTransformer):
         else:
             assert False, 'Unexpected For loop \'%s\', can only iterate over interior_points, boder_points, or neighbor_points of a grid' % node
 
+    def visit_NondeterministicFor(self, node):
+        return self.visit_For(node)
+
     def visit_AugAssign(self, node):
         target = self.visit(node.target)
         assert type(target) is OutputElement, 'Only assignments to current output element permitted'
-        return OutputAssignment(ScalarBinOp(OutputElement(), node.op, self.visit(node.value)))
+        #return OutputAssignment(ScalarBinOp(OutputElement(), node.op, self.visit(node.value)))
+        out = OutputAssignment(ScalarBinOp(OutputElement(), node.op, self.visit(node.value)))
+        if self.logging:
+            out.logging = []
+        return out
 
     def visit_Assign(self, node):
         targets = map (self.visit, node.targets)
         assert len(targets) == 1 and type(targets[0]) is OutputElement, 'Only assignments to current output element permitted'
-        return OutputAssignment(self.visit(node.value))
+        #return OutputAssignment(self.visit(node.value))
+        out = OutputAssignment(self.visit(node.value))
+        if self.logging:
+            out.logging = []
+            # FIXME: This is so ghetto
+            import types
+            def new_deep_copy(self, memo):
+                tmp = self.old_deep_copy({})
+                tmp.old_deep_copy = tmp.__deepcopy__
+                tmp.__deepcopy__ = types.MethodType(new_deep_copy, tmp)
+                tmp.logging = self.logging
+                return tmp
+            out.old_deep_copy = out.__deepcopy__
+            out.__deepcopy__ = types.MethodType(new_deep_copy, out)
+        return out
 
     def visit_Subscript(self, node):
         if type(node.slice) is ast.Index:

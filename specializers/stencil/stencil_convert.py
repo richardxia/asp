@@ -12,7 +12,7 @@ import stencil_model
 from assert_utils import *
 
 class StencilConvertAST(ast_tools.ConvertAST):
-    def __init__(self, model, input_grids, output_grid):
+    def __init__(self, model, input_grids, output_grid, logging=False):
         assert_has_type(model, stencil_model.StencilModel)
         assert len(input_grids) == len(model.input_grids), 'Incorrect number of input grids'
         self.model = model
@@ -22,6 +22,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
         self.dim_vars = []
         self.var_names = [self.output_grid_name]
         self.next_fresh_var = 0
+        self.logging = logging
         super(StencilConvertAST, self).__init__()
 
     def run(self):
@@ -63,10 +64,20 @@ class StencilConvertAST(ast_tools.ConvertAST):
 
         # generate the code to unpack arrays into C++ pointers and macros for accessing
         # the arrays
+
+        if self.logging:
+            logging_file = "/tmp/trace.txt"
+            body.append(cpp_ast.Value("std::ofstream", "_asp_log_file"))
+            body.append(cpp_ast.FunctionCall("_asp_log_file.open", [cpp_ast.String(logging_file)]))
+
         body.extend([self.gen_array_macro_definition(x) for x in self.argdict])
         body.extend(self.gen_array_unpack())
 
         body.append(self.visit_interior_kernel(node.interior_kernel))
+
+        if self.logging:
+            body.append(cpp_ast.FunctionCall("_asp_log_file.close", []))
+
         return cpp_ast.FunctionBody(cpp_ast.FunctionDeclaration(cpp_ast.Value("void", func_name), args),
                                     body)
 
@@ -92,7 +103,33 @@ class StencilConvertAST(ast_tools.ConvertAST):
         return ret_node
 
     def visit_OutputAssignment(self, node):
-        return cpp_ast.Assign(self.visit(stencil_model.OutputElement()), self.visit(node.value))
+        # FIXME: This is also ghetto
+        if hasattr(node, 'logging'):
+            def find_InputElement(node):
+                if isinstance(node, stencil_model.InputElement):
+                    return node
+                elif hasattr(node, "_fields"):
+                    for x in node._fields:
+                        x = find_InputElement(getattr(node, x))
+                        if x is not None:
+                            return x
+                return None
+            input_elm = find_InputElement(node)
+            index = self.gen_array_macro(input_elm.grid.name,
+                                         map(lambda x,y: cpp_ast.BinOp(cpp_ast.CName(x), "+", cpp_ast.CNumber(y)),
+                                             self.dim_vars,
+                                             input_elm.offset_list))
+        #return cpp_ast.Assign(self.visit(stencil_model.OutputElement()), self.visit(node.value))
+        block = cpp_ast.UnbracedBlock()
+        assign = cpp_ast.Assign(self.visit(stencil_model.OutputElement()), self.visit(node.value))
+        block.append(assign)
+        # FIXME: This is pretty ghetto
+        if hasattr(node, 'logging'):
+
+            # Only neighbor index value
+            logging = cpp_ast.PrintLog.write_log(self.output_grid_name, self.output_index_var, index, assign.lvalue)
+            block.append(logging)
+        return block
 
     def visit_Constant(self, node):
         return node.value
