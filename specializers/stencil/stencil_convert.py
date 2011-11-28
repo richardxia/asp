@@ -12,7 +12,7 @@ import stencil_model
 from assert_utils import *
 
 class StencilConvertAST(ast_tools.ConvertAST):
-    def __init__(self, model, input_grids, output_grid, logging=False):
+    def __init__(self, model, input_grids, output_grid, should_trace=False):
         assert_has_type(model, stencil_model.StencilModel)
         assert len(input_grids) == len(model.input_grids), 'Incorrect number of input grids'
         self.model = model
@@ -22,7 +22,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
         self.dim_vars = []
         self.var_names = [self.output_grid_name]
         self.next_fresh_var = 0
-        self.logging = logging
+        self.should_trace = should_trace
         super(StencilConvertAST, self).__init__()
 
     def run(self):
@@ -65,7 +65,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
         # generate the code to unpack arrays into C++ pointers and macros for accessing
         # the arrays
 
-        if self.logging:
+        if self.should_trace:
             logging_file = "/tmp/trace.txt"
             body.append(cpp_ast.Value("std::ofstream", "_asp_log_file"))
             body.append(cpp_ast.FunctionCall("_asp_log_file.open", [cpp_ast.String(logging_file)]))
@@ -75,7 +75,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
 
         body.append(self.visit_interior_kernel(node.interior_kernel))
 
-        if self.logging:
+        if self.should_trace:
             body.append(cpp_ast.FunctionCall("_asp_log_file.close", []))
 
         return cpp_ast.FunctionBody(cpp_ast.FunctionDeclaration(cpp_ast.Value("void", func_name), args),
@@ -104,7 +104,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
 
     def visit_OutputAssignment(self, node):
         # FIXME: This is also ghetto
-        if hasattr(node, 'logging'):
+        if hasattr(node, 'should_trace'):
             def find_InputElement(node):
                 if isinstance(node, stencil_model.InputElement):
                     return node
@@ -124,11 +124,11 @@ class StencilConvertAST(ast_tools.ConvertAST):
         assign = cpp_ast.Assign(self.visit(stencil_model.OutputElement()), self.visit(node.value))
         block.append(assign)
         # FIXME: This is pretty ghetto
-        if hasattr(node, 'logging'):
+        if hasattr(node, 'should_trace'):
 
             # Only neighbor index value
-            logging = cpp_ast.PrintLog.write_log(self.output_grid_name, self.output_index_var, index, assign.lvalue)
-            block.append(logging)
+            should_trace = cpp_ast.PrintLog.write_log(self.output_grid_name, self.output_index_var, index, assign.lvalue)
+            block.append(should_trace)
         return block
 
     def visit_Constant(self, node):

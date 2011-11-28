@@ -37,44 +37,20 @@ class LogReader(object):
                 self.add_to_log([x.strip() for x in tmp.group(1).split(",")])
 
     def add_to_log(self, args):
-        #target, target_idx, inner_x, inner_y, value = args
         target, target_idx, input_idx, value = args
         target_idx = int(target_idx)
-        #inner_x = int(inner_x)
-        #inner_y = int(inner_y)
         input_idx = int(input_idx)
         value = float(value)
         if target_idx not in self.log:
             self.log[target_idx] = []
-        #self.log[target_idx].append(((inner_x, inner_y), value))
         self.log[target_idx].append((input_idx, value))
 
-    #def getIterator(self, x, *args):
     def getIterator(self):
-        # Wait, I clearly have no idea what I'm doing
-        #print "what is x: ", x
-        #if x == "out_grid":
-        #    for i in self.log.keys():
-        #        yield i
-        #elif x == "in_grid":
-        #    for l in self.log[args[0]]:
-        #        coord, value = l
-        #        print "coord: ", coord
-        #        # I hate myself for doing this, but...
-        #        self.current_value = value
-        #        yield coord
         def tmp(grid, *args):
             grid_coord = py2cpp(args[0], grid.shape)
 
-            #reverse_coord = cpp2py(grid_coord, grid.shape)
-            #print args[0], grid_coord, reverse_coord
-            #assert(args[0] == reverse_coord)
-
-            #for l in self.log[args[0]]:
             for l in self.log[grid_coord]:
                 coord, value = l
-                print "coord: ", coord
-                # I hate myself for doing this, but...
                 self.current_value = value
                 yield cpp2py(coord, grid.shape)
         return tmp
@@ -91,10 +67,8 @@ class StencilLoggingTransform(ast.NodeTransformer):
         self.iterators = []
         tmp = self.visit(node)
         ast.fix_missing_locations(tmp)
-        #print ast.dump(tmp)
         return tmp
 
-    ## Open the log file?
     def visit_FunctionDef(self, node):
         self.generic_visit(node)
         imp = ast.ImportFrom("stencil_logging_transform", [ast.alias("_log_read", None)], 0)
@@ -122,29 +96,3 @@ class StencilLoggingTransform(ast.NodeTransformer):
         self.generic_visit(node)
         self.iterators.pop()
         return node
-
-    #def visit_FunctionDef(self, node):
-    #    # TODO: Open log file
-    #    #logging_file = "/tmp/shit.txt"
-    #    #node.body[0:0] = [cpp_ast.Value("std::ofstream", "_asp_log_file"),
-    #    #cpp_ast.FunctionCall("_asp_log_file.open", [cpp_ast.String(logging_file)])]
-    #    #node.body.append(cpp_ast.FunctionCall("_asp_log_file.close", []))
-    #    self.generic_visit(node)
-    #    node.body.insert(0, ast.OpenLogFile())
-    #    node.body.append(ast.CloseLogFile())
-    #    return node
-
-    #def visit_For(self, node):
-    #    # TODO: add iteration variable, 
-    #    # Keep state related to python iteration targets
-    #    self.generic_visit(node)
-    #    #return node
-    #    #return ast.NondeterministicFor(node.target, node.iter, node.body, node.orelse)
-    #    return ast.NondeterministicFor(node)
-
-    #def visit_Assign(self, node):
-    #    # TODO: put a logging notice
-    #    # Give up if multi-target assign
-    #    self.generic_visit(node)
-    #    #return ast.LogAssign(node)
-    #    return ast.LogWrite(node)

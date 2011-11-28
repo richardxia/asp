@@ -12,27 +12,12 @@ class BasicTests(unittest.TestCase):
         # if no kernel method is defined, it should fail
         self.failUnlessRaises((Exception), StencilKernel)
     
-    #def test_pure_python(self):
-    #    class IdentityKernel(StencilKernel):
-    #        def kernel(self, in_grid, out_grid):
-    #            for x in out_grid.interior_points():
-    #                out_grid[x] = in_grid[x]
-
-    #    kernel = IdentityKernel()
-    #    in_grid = StencilGrid([10,10])
-    #    out_grid = StencilGrid([10,10])
-    #    kernel.pure_python = True
-    #    kernel.kernel(in_grid, out_grid)
-    #    self.failIf(in_grid[3,3] != out_grid[3,3])
-
-    # Don't modify the ast, just overload the iterators?
-    
     def test_parallelization(self):
         class IdentityKernel(StencilKernel):
             def kernel(self, in_grid, out_grid):
                 for x in out_grid.interior_points():
                     for y in in_grid.neighbors(x, 1):
-                        out_grid[x] = out_grid[x] + in_grid[y]
+                        out_grid[x] = 2*out_grid[x] + in_grid[y]
 
         kernel = IdentityKernel()
         in_grid = StencilGrid([10,10])
@@ -41,14 +26,13 @@ class BasicTests(unittest.TestCase):
         in_grid[3,2] = 1
         in_grid[3,4] = 2
         in_grid[4,3] = 3
-        kernel.logging = True
-        #kernel.kernel(in_grid, out_grid)
+        kernel.should_trace = True
+        kernel.kernel(in_grid, out_grid)
 
         out_grid = StencilGrid([10,10])
         kernel = IdentityKernel()
         kernel.verify_log = True
         kernel.kernel(in_grid, out_grid)
-        #self.failIf(in_grid[3,3] != out_grid[3,3])
 
 if __name__ == '__main__':
     unittest.main()

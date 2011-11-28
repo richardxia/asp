@@ -13,9 +13,9 @@ from asp.util import *
 
 # class to convert from Python AST to StencilModel
 class StencilPythonFrontEnd(ast.NodeTransformer):
-    def __init__(self, logging=False):
+    def __init__(self, should_trace=False):
         super(StencilPythonFrontEnd, self).__init__()
-        self.logging = logging
+        self.should_trace = should_trace
 
     def parse(self, ast):
         return self.visit(ast)
@@ -90,8 +90,8 @@ class StencilPythonFrontEnd(ast.NodeTransformer):
         assert type(target) is OutputElement, 'Only assignments to current output element permitted'
         #return OutputAssignment(ScalarBinOp(OutputElement(), node.op, self.visit(node.value)))
         out = OutputAssignment(ScalarBinOp(OutputElement(), node.op, self.visit(node.value)))
-        if self.logging:
-            out.logging = []
+        if self.should_trace:
+            out.should_trace = []
         return out
 
     def visit_Assign(self, node):
@@ -99,15 +99,15 @@ class StencilPythonFrontEnd(ast.NodeTransformer):
         assert len(targets) == 1 and type(targets[0]) is OutputElement, 'Only assignments to current output element permitted'
         #return OutputAssignment(self.visit(node.value))
         out = OutputAssignment(self.visit(node.value))
-        if self.logging:
-            out.logging = []
+        if self.should_trace:
+            out.should_trace = []
             # FIXME: This is so ghetto
             import types
             def new_deep_copy(self, memo):
                 tmp = self.old_deep_copy({})
                 tmp.old_deep_copy = tmp.__deepcopy__
                 tmp.__deepcopy__ = types.MethodType(new_deep_copy, tmp)
-                tmp.logging = self.logging
+                tmp.should_trace = self.should_trace
                 return tmp
             out.old_deep_copy = out.__deepcopy__
             out.__deepcopy__ = types.MethodType(new_deep_copy, out)

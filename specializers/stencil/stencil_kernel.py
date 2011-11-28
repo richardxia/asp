@@ -40,12 +40,22 @@ def instrument_grids(out_grid, in_grids):
     class LoggedStencilGrid(StencilGrid):
         def __setitem__(self, attr, value):
             super(self.__class__, self).__setitem__(attr, value)
-            assert log.current_value == value, "Expected index %s to be %s, got %s" % (attr, log.current_value, value)
+            assert log.current_value == value, "Expected index %s to have value %s, got %s" % (attr, log.current_value, value)
+
+    def verifying_iterator(self, *args):
+        old_values = set([x for x in self.old_neighbors(*args)])
+        for value in log.getIterator()(self, *args):
+            if value not in old_values:
+                raise Exception("Unexpected iteration value: " + str(value))
+            else:
+                old_values.remove(value)
+                yield value
 
     log = _log_read()
     for in_grid in in_grids:
         import types
-        in_grid.neighbors = types.MethodType(log.getIterator(), in_grid)
+        in_grid.old_neighbors = in_grid.neighbors
+        in_grid.neighbors = types.MethodType(verifying_iterator, in_grid)
 
     # Kind of ghetto to just change its class to the special type
     out_grid.__class__ = LoggedStencilGrid
@@ -70,7 +80,7 @@ class StencilKernel(object):
         self.should_unroll = True
         self.should_cacheblock = False
         self.block_size = 1
-        self.logging = False
+        self.should_trace = False
         self.verify_log = False
         
         # replace kernel with shadow version
@@ -89,25 +99,18 @@ class StencilKernel(object):
         mod.add_to_init([cpp_ast.Statement("import_array();")])
         if self.with_cilk:
             mod.module.add_to_preamble([cpp_ast.Include("cilk/cilk.h", True)])
-        if self.logging:
+        if self.should_trace:
             #mod.backends['c++'].module.add_to_preamble([cpp_ast.Include("iostream", True)])
             mod.backends['c++'].module.add_to_preamble([cpp_ast.Include("fstream", True)])
         
 
     def shadow_kernel(self, *args):
-        #if self.logging:
-        #    kernel_ast = StencilLoggingTransform().parse(self.kernel_ast)
-        #    print ast.dump(kernel_ast)
-        #    self.logging_python_kernel = get_func(compile(self.kernel_ast, "_asp_logging_kernel", 'exec'), 'kernel', self)
-        #    return self.logging_python_kernel(*args)
-
         if self.verify_log:
             # Figure out what the actual function prototype is
             instrument_grids(args[1], [args[0]])
             self.pure_python = True
 
         if self.pure_python:
-            print args[0].__class__
             return self.pure_python_kernel(*args)
 
         #FIXME: instead of doing this short-circuit, we should use the Asp infrastructure to
@@ -123,8 +126,8 @@ class StencilKernel(object):
         # ask asp infrastructure for machine and platform info, including if cilk+ is available
         #FIXME: impelement.  set self.with_cilk=true if cilk is available
 
-        if self.logging:
-            self.model = StencilPythonFrontEnd(logging=self.logging).parse(self.kernel_ast)
+        if self.should_trace:
+            self.model = StencilPythonFrontEnd(should_trace=self.should_trace).parse(self.kernel_ast)
         
         input_grids = args[0:-1]
         output_grid = args[-1]
@@ -138,7 +141,7 @@ class StencilKernel(object):
             Converter = StencilConvertASTCilk
 
         # generate variant with no unrolling, then generate variants for various unrollings
-        base_variant = Converter(model, input_grids, output_grid, logging=self.logging).run()
+        base_variant = Converter(model, input_grids, output_grid, should_trace=self.should_trace).run()
         variants = [base_variant]
         variant_names = ["kernel"]
 
