@@ -10,6 +10,8 @@ import asp.codegen.cpp_ast as cpp_ast
 import asp.codegen.ast_tools as ast_tools
 import stencil_model
 from assert_utils import *
+import asp.verify
+from copy import deepcopy
 
 class StencilConvertAST(ast_tools.ConvertAST):
     def __init__(self, model, input_grids, output_grid, should_trace=False):
@@ -62,13 +64,12 @@ class StencilConvertAST(ast_tools.ConvertAST):
 
         body = cpp_ast.Block()
 
+        if self.should_trace:
+            self.trace_file = asp.verify.AspTrace()
+            body.append(self.trace_file.emit_open())
+
         # generate the code to unpack arrays into C++ pointers and macros for accessing
         # the arrays
-
-        if self.should_trace:
-            logging_file = "/tmp/trace.txt"
-            body.append(cpp_ast.Value("std::ofstream", "_asp_log_file"))
-            body.append(cpp_ast.FunctionCall("_asp_log_file.open", [cpp_ast.String(logging_file)]))
 
         body.extend([self.gen_array_macro_definition(x) for x in self.argdict])
         body.extend(self.gen_array_unpack())
@@ -76,7 +77,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
         body.append(self.visit_interior_kernel(node.interior_kernel))
 
         if self.should_trace:
-            body.append(cpp_ast.FunctionCall("_asp_log_file.close", []))
+            body.append(self.trace_file.emit_close())
 
         return cpp_ast.FunctionBody(cpp_ast.FunctionDeclaration(cpp_ast.Value("void", func_name), args),
                                     body)
@@ -103,32 +104,17 @@ class StencilConvertAST(ast_tools.ConvertAST):
         return ret_node
 
     def visit_OutputAssignment(self, node):
-        # FIXME: This is also ghetto
-        if hasattr(node, 'should_trace'):
-            def find_InputElement(node):
-                if isinstance(node, stencil_model.InputElement):
-                    return node
-                elif hasattr(node, "_fields"):
-                    for x in node._fields:
-                        x = find_InputElement(getattr(node, x))
-                        if x is not None:
-                            return x
-                return None
-            input_elm = find_InputElement(node)
-            index = self.gen_array_macro(input_elm.grid.name,
-                                         map(lambda x,y: cpp_ast.BinOp(cpp_ast.CName(x), "+", cpp_ast.CNumber(y)),
-                                             self.dim_vars,
-                                             input_elm.offset_list))
         #return cpp_ast.Assign(self.visit(stencil_model.OutputElement()), self.visit(node.value))
         block = cpp_ast.UnbracedBlock()
         assign = cpp_ast.Assign(self.visit(stencil_model.OutputElement()), self.visit(node.value))
         block.append(assign)
-        # FIXME: This is pretty ghetto
+        # FIXME: is pretty ghetto
         if hasattr(node, 'should_trace'):
 
             # Only neighbor index value
-            should_trace = cpp_ast.PrintLog.write_log(self.output_grid_name, self.output_index_var, index, assign.lvalue)
-            block.append(should_trace)
+            index = deepcopy(self.input_element_index)
+            log = self.trace_file.emit_write(self.output_grid_name, self.output_index_var, index, assign.lvalue)
+            block.append(log)
         return block
 
     def visit_Constant(self, node):
@@ -145,6 +131,7 @@ class StencilConvertAST(ast_tools.ConvertAST):
                                      map(lambda x,y: cpp_ast.BinOp(cpp_ast.CName(x), "+", cpp_ast.CNumber(y)),
                                          self.dim_vars,
                                          node.offset_list))
+        self.input_element_index = index
         return cpp_ast.Subscript("_my_" + node.grid.name, index)
 
     def visit_InputElementExprIndex(self, node):

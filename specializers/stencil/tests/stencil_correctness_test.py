@@ -22,10 +22,10 @@ class BasicTests(unittest.TestCase):
         kernel = IdentityKernel()
         in_grid = StencilGrid([10,10])
         out_grid = StencilGrid([10,10])
-        in_grid[2,3] = 4
-        in_grid[3,2] = 1
-        in_grid[3,4] = 2
-        in_grid[4,3] = 3
+        in_grid[2,3] = 1
+        in_grid[3,2] = 2
+        in_grid[3,4] = 3
+        in_grid[4,3] = 4
         kernel.should_trace = True
         kernel.kernel(in_grid, out_grid)
 
@@ -33,6 +33,7 @@ class BasicTests(unittest.TestCase):
         kernel = IdentityKernel()
         kernel.verify_log = True
         kernel.kernel(in_grid, out_grid)
+        self.failIf(out_grid[3,3] != 18)
 
 if __name__ == '__main__':
     unittest.main()
