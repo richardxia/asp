@@ -82,9 +82,6 @@ class StencilPythonFrontEnd(ast.NodeTransformer):
         else:
             assert False, 'Unexpected For loop \'%s\', can only iterate over interior_points, boder_points, or neighbor_points of a grid' % node
 
-    def visit_NondeterministicFor(self, node):
-        return self.visit_For(node)
-
     def visit_AugAssign(self, node):
         target = self.visit(node.target)
         assert type(target) is OutputElement, 'Only assignments to current output element permitted'
