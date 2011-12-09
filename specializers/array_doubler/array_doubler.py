@@ -1,5 +1,7 @@
 # really dumb example of using templates w/asp
 
+#import avro_backend
+
 class ArrayDoubler(object):
     
     def __init__(self):
@@ -16,16 +18,21 @@ class ArrayDoubler(object):
         mod.add_function("double_in_c", rendered)
         return mod.double_in_c(arr)
 
+
     def double_using_scala(self, arr):
         import asp.jit.asp_module as asp_module
+        import avroInter.avro_backend as avro_backend
         mod = asp_module.ASPModule(use_scala=True)
                         
+        rendered = avro_backend.generate_scala_object("double","func1.scala")
+        """
         f = open("func.scala")
         rendered = f.read()
         f.close()
-        
-        mod.add_function("double_using_scala", rendered, backend="scala")
-        return mod.double_using_scala(arr)
+        """
+        #mainfunc name needs to be the same as the name for the added function below
+        mod.add_function("double", rendered, backend="scala")
+        return mod.double(arr, 2, "asdfasdf")
 
     def double(self, arr):
         return map (lambda x: x*2, arr)

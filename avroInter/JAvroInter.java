@@ -7,6 +7,7 @@ import java.io.IOException;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.file.DataFileStream;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -14,6 +15,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.util.Utf8;
+
+import java.io.*;
 /**
  * 
  * TO NOTE: 
@@ -22,6 +25,10 @@ import org.apache.avro.util.Utf8;
  * 		...looking for a way around
  * 	2) input args are put in an Object[T],in which arrays are stored as GenericData.Array[T],
  * 		and strings are of class Utf8
+ * 
+ * 	3) when calling returnStored(index), must use the wrapper classes not primitive types. 
+ * 		i.e. write Integer i = xed(index) instead of int i = x.returnStored(index)
+ * 		or write Double d = x.returnStored(index) instead of double d = x.returnStored(index)
  *
  */
 
@@ -29,7 +36,8 @@ public class JAvroInter{
 	
 	String OUTPUT_FILE_NAME;
 	String INPUT_FILE_NAME;
-	public Object[] inputs;
+	Schema schema;
+	public Object[] stored;
 	
 	public JAvroInter(String outputFile, String inputFile) throws IOException, IllegalAccessException,InstantiationException,ClassNotFoundException{
 		OUTPUT_FILE_NAME = outputFile;
@@ -94,7 +102,7 @@ public class JAvroInter{
 			type = this.getAvroType(arg);
 			entry = String.format("\n"
 				+"\t\t{ \"name\": \"arg%d\"	, \"type\": %s	}", count, type);
-			if (arg!= args[args.length-1]){
+			if (count != args.length){
 				entry += ",";
 			}
 			schema += entry;
@@ -110,6 +118,8 @@ public class JAvroInter{
 		
 		String s= this.makeSchema(args);		
 		Schema schema = (new Schema.Parser()).parse(s);		
+		this.schema = schema;
+		
 		GenericRecord datum = new GenericData.Record(schema);
 		
 		datum.put("size", args.length);				
@@ -117,50 +127,91 @@ public class JAvroInter{
 		for (Object arg: args){	
 			datum.put(String.format("arg%d",count), arg);
 			count++;
-		}
-				
-		File file = new File(OUTPUT_FILE_NAME);
+		}				
 		DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
 		DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
-		dataFileWriter.create(schema,file);
+		if (OUTPUT_FILE_NAME == "System.out"){
+			dataFileWriter.create(schema,System.out);
+		}
+		else {
+			File file = new File(OUTPUT_FILE_NAME);
+			dataFileWriter.create(schema,file);
+		}
 		dataFileWriter.append(datum);
 		dataFileWriter.close();		
 	}	
 		
 	public void readAvroFile() throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
 		File file = new File(INPUT_FILE_NAME);
-		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
-		DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(file,reader);
+		double start= System.nanoTime();
 		
-		GenericRecord record = dataFileReader.next();
+		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
+		double end = System.nanoTime();
+		double elapsed = end-start;
+		//System.out.println("rdinstant:"+elapsed);
+		GenericRecord record;
+		
+		if (INPUT_FILE_NAME == "System.in"){
+			DataFileStream dfs = new DataFileStream(System.in, reader);
+			record = (GenericRecord)dfs.next();
+		}
+		else{
+			DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(file,reader);
+			record = dataFileReader.next();
+		}				
 		this.store(record);
 	}
 	
 	/**
-	 * this method takes the input data, presumably from args.avro, and stores it in the array inputs
+	 * this method takes the input data, presumably from args.avro, and stores it in the array stored
 	 */	
 	public void store(GenericRecord record) throws InstantiationException, IllegalAccessException{
 		int size = (java.lang.Integer)record.get("size");
-		inputs = new Object[size];
-		Object child, parent;
+		stored = new Object[size];
+		Object item;
 		for (int i=0; i < size; i++){
-			inputs[i] = record.get(String.format("arg%d",i+1));		
+			//convert org.apache.avro.util.Utf8 to String format
+			item = record.get(String.format("arg%d",i+1));
+			if (item instanceof org.apache.avro.util.Utf8){
+				stored[i] = item.toString();
+			}
+			else{
+				stored[i] = item;
+			}
 		}		
 	}	 
 	
-	public <T> T returnInput(int i){
-		return (T)inputs[i];
+	/**
+	 * returns the item in stored at the specified index.
+	 */
+	
+	public <T> T returnStored(int index){
+		return (T)stored[index]; 
 	}
-
-	// doesn't do recursive casting for arrays
-	public <T> T[] returnArrayInput(int i, T[] example){
-		return (T[])((List)(inputs[i])).toArray(example);
+	
+	/**
+	 * returns the whole array stored
+	 */
+	
+	public Object[] returnStored(){
+		return stored;
+	}
+	
+	/**
+	 * Only use if a List subclass (i.e. GenericData.Array) is in stored[index].
+	 * Converts the List subclass to an array of the type of the example.
+	 * NOTE: does not recursively convert. i.e. a list of lists will be converted
+	 * to an array of lists. 
+	 */
+	
+	public <T> T[] returnStoredArray(int index, T[] example){
+		return (T[])((List)(stored[index])).toArray(example);
 	}
 
 		
-	public void printInputs(){
+	public void printStored(){
 		System.out.println("begin printing args");
-		for (Object a: inputs){
+		for (Object a: stored){
 			if (a == null){
 				System.out.println("THE ARG... is null");
 			}
@@ -173,16 +224,71 @@ public class JAvroInter{
 	}
 	
 	public static void main(String[] args) throws IOException, IllegalAccessException, ClassNotFoundException, InstantiationException{
+		/**
+		double start = System.nanoTime();
+		JAvroInter j = new JAvroInter("results.avro", "results.avro");
+		double end = System.nanoTime();
+		double elapsed = end- start;
+		System.out.println("i-time:"+ elapsed);
+		**/
+	
 		
-		JAvroInter j = new JAvroInter("results.avro", "args.avro");
-		//j.writeAvroFile();
-		Object[] argz = j.inputs;		
-		double[] a = {1,2,3,5};
-		System.out.println("all good");
-		System.out.println(argz[1] instanceof List);
-		System.out.println(argz[1].getClass());
+		try{
+		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		//String words = br.readLine();
+		//System.out.println("sys in: "+ words);
+		JAvroInter j = new JAvroInter("System.out", "System.in");
+		Integer d = j.returnStored(1);
+		System.out.println("here's d: " + d);
+		//String s = j.returnStored(2);
+		//System.out.println(s);
+		Object[] results = new Object[1];
+		results[0]  = "asdfasdf";
+		j.writeAvroFile(results);
 		
+		//need to print contents of system.out???????????
+		//BufferedReader br = new BufferedReader(new InputStreamReader(System.out));
+		//File f = new File("System.out");
+		//BufferedReader br = new BufferedReader(new FileReader(f));
+		
+		//System.out.println("here's out: " + br.read());
+		/**
+		JAvroInter w = new JAvroInter("results.avro", "System.out");
+		String q = w.returnStored(0);
+		System.out.println("returned val:" + q);
+		**/
+		}
+		catch(IOException ioe){
+			System.out.println("caught urrror: "+ ioe);
+		}
+		
+		
+		
+		/**
+		System.out.println("begin making a");
+		Object[] a = new Double[100000];
+		for (int i=0; i<100000; i++){
+			a[i] = 1.0;
+		}
+		System.out.println("end making a");
+		
+		start = System.nanoTime();
+		//j.writeAvroFile(a);
+		end = System.nanoTime();
+		elapsed = end-start;
+		System.out.println("w-time:"+ elapsed);
+		
+		start = System.nanoTime();
+		Double str = j.returnStored(1);
+		end = System.nanoTime();
+		elapsed = end-start;
+		System.out.println("r-time:" + elapsed);
+		
+		Object[] arr = {1,2,3};
+		int i = (Integer)(arr[1]);
 		//List lis = java.util.Arrays.asList(ArrayUtils.toObject(a));
+		**/ 
+		 
 	}
 	/**
 	 *  The below commented out methods were made in an attempt to convert avro given classes,
@@ -227,9 +333,9 @@ public class JAvroInter{
 	}
 	
 	public void format(int i){
-		String className = inputs[i].getClass().getName();
+		String className = stored[i].getClass().getName();
 		if (className == "org.apache.avro.util.Utf8"){
-			inputs[i] = inputs[i].toString();			
+			stored[i] = stored[i].toString();			
 			// other formatting changes that need to be done??
 		}
 	}

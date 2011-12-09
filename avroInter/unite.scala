@@ -3,6 +3,7 @@ import org.apache.avro.generic.GenericData
 object unite {
 
 	def main(args: Array[String]){
+/**
 		var s = new org.apache.avro.JAvroInter("results.avro", "args.avro")
 		var array = s.returnInput[GenericData.Array[Int]](1)
 
@@ -19,7 +20,7 @@ object unite {
 		var arr = new Array[Int](2)
 		arr(0) = 3
 		arr(1) = 23
-		results(2) = s.convertArr[Int](arr)
+		//results(2) = s.convertArr[Int](arr)
 
 		var arr2 = new Array[Array[String]](2)
 		arr2(0) = new Array[String](2)
@@ -36,6 +37,7 @@ object unite {
 		
 		var reader = new org.apache.avro.JAvroInter("adsfsdf.avro", "results/results.avro")
 		reader.printInputs
+**/
 	}
 
 	// need to make this work for recursive lists?

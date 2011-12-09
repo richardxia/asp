@@ -1,6 +1,10 @@
 
 import json
+import sys
+import getopt
+import time
 from avro import schema, datafile, io
+from cStringIO import StringIO
 
 """
 PYTHON            JSON        AVRO
@@ -30,6 +34,9 @@ TO NOTE:
 2) tuples are converted to lists
 """
 
+stored = []
+to_write = []
+
 def getAvroType(pyObject):
     t = type(pyObject)
     if t == dict:
@@ -55,7 +62,7 @@ def getAvroType(pyObject):
     elif t == type(None):
         return '"null"'
     else:
-        raise Error("Unrecognized type")
+        raise Exception("Unrecognized type")
     return entry
         
 
@@ -75,7 +82,7 @@ def makeSchema(args):
         t = getAvroType(arg)
         entry = """
         {    "name": "arg%s"    , "type": %s    }"""%(count,t)
-        if arg != args[-1]:
+        if count != len(args):
             entry+= ','
         schema = schema + entry
         count+=1
@@ -86,11 +93,16 @@ def makeSchema(args):
     return schema
 
     
-def write_avro_file(args, outfile='args.avro'):
+def write_avro_file(args, outsource='args.avro'):
     SCHEMA = schema.parse(makeSchema(args))
     rec_writer = io.DatumWriter(SCHEMA)   
-    OUTFILE_NAME = outfile
-    df_writer = datafile.DataFileWriter(open(OUTFILE_NAME,'wb'), rec_writer, 
+        
+    if outsource == sys.stdout:
+        df_writer = datafile.DataFileWriter(sys.stdout, rec_writer, 
+                                        writers_schema = SCHEMA, codec = 'deflate')
+    
+    else:
+        df_writer = datafile.DataFileWriter(open(outsource,'wb'), rec_writer, 
                                         writers_schema = SCHEMA, codec = 'deflate')
     data = {}
     count = 1
@@ -102,29 +114,73 @@ def write_avro_file(args, outfile='args.avro'):
         count +=1
     df_writer.append(data)
     df_writer.close()
+
+#this function reads the specified avro file and stores the data in the global list stored
+def read_avro_file(insource='results.avro'):
+    rec_reader = io.DatumReader()
+    if insource == sys.stdin:      
+        #DataFileReader cannot read from streams like sys.stdin because it calls
+        #seek so a temp file is necessary
+        
+        input = sys.stdin.read()
+        temp_file = StringIO(input)
+
+        df_reader = datafile.DataFileReader(temp_file, rec_reader)
+    else:
+        df_reader = datafile.DataFileReader(open(insource), rec_reader)
+    del stored[:]
+    for record in df_reader:
+        size = record['size']
+        for i in range(size):
+            i = i+1
+            arg = record["arg%s"%(i)]
+            #print arg
+            stored.append(arg)
+        print "LAST ARG:", stored[-1]
+            
+def return_stored(index):
+    if stored:
+        return stored[index]
+    else:
+        read_avro_file()
+        return stored[index]
     
+def return_stored():
+    if stored:
+        return stored
+    else:
+        read_avro_file()
+        return stored
+
+def set_args_to_write(args):
+    del to_write[:]
+    for a in args:
+        to_write.append(a)
+        
 def tupleToList(input):
     output = list(input)
     for i in range(len(output)):
         if type(output[i]) == tuple:
             output[i] = list(output[i])
     return output
+        
+if __name__ == '__main__': 
+    args = sys.argv   
+    #sys.stderr.write('\nargs receive inside pyavro:' + str(args) + "\n")
+    
+    if len(args) >1:
+        if args[1] == 'write':
+            #inputs = eval(args[2].replace('/', "'"))   
+            inputs = sys.stdin.read().replace('/', "'")
+            inputs = eval(inputs)
+            #sys.stderr.write("inputs:" + str(inputs)+"\n")
+            #inputs  = [[1.0*i for i in range(1000000)]]
+            #sys.stderr.write("insde write")
+            write_avro_file(inputs, sys.stdout)
 
-def read_avro_file(filename='results.avro'):
-    rec_reader = io.DatumReader()
-    OUTFILE_NAME = filename
-    df_reader = datafile.DataFileReader(open(OUTFILE_NAME), rec_reader)
-    results = []
-    for record in df_reader:
-        size = record['size']
-        for i in range(size):
-            i = i+1
-            arg = record["arg%s"%(i)]
-            print "ARG:", arg
-            results.append(arg)
-    return results
-
-if __name__ == '__main__':
-    args = [ 1,[1,2,3],"asfdsf"]#,[[1,2,4], [2,3,5]],[1,2,3,4], "asdf",[1,3], [1,2,34]]
-    write_avro_file(args)
-    read_avro_file('args.avro')
+        elif args[1] == 'read':
+            read_avro_file('results.avro')
+        else:
+            raise Exception("Unknown first arg type. Valid options are 'read' or 'write'")
+    else:
+        raise Exception("More arguments required")

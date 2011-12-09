@@ -1,37 +1,63 @@
 import os
 import os.path
 import subprocess
-#how to do this without having to have this in here??
-from PyAvroInter import *
-            
+from avroInter.PyAvroInter import *
+import sys
+
 class ScalaFunction:
     def __init__(self, classname, source_dir):
         self.classname = classname
-        self.source_dir = source_dir                       
+        self.source_dir = source_dir                               
+    
+    def find_close(self,str):
+        index = len(str)-1
+        print 'index is:',index
+        print 'str len is:', len(str)
+        char = str[index]
+        
+        while (char!=']'):
+            index -=1
+            char = str[index]
+        return index
+ 
     
     def __call__(self, *args, **kwargs):
-              
-        #print "INPUTS:", args         
-        write_avro_file(args)        
-        result = subprocess.Popen(['scala', '-classpath', self.source_dir + ":../../avroInter",
-                  self.classname], stdout=subprocess.PIPE)
-        result.wait()
+                   
+        write_avro_file(args, 'args.avro')        
+        p1 = subprocess.Popen(['scala', '-classpath', self.source_dir + ':../../avroInter', self.classname], stdin=None, stdout=subprocess.PIPE)
+        p1.wait()
+                 
+        if p1.returncode != 0:
+            raise Exception("Bad return code")
+            
+        read_avro_file('results.avro')
         
-        if result.returncode != 0:
-            raise Error("Bad return code")
-        output = result.communicate()[0]
+        os.remove('args.avro')
+        os.remove('results.avro')
         
-        results = read_avro_file()
-        #"""
-        for r in results:
-            print "RESULTS: ", r
-            print "TYPE: ", type(r)
-        #"""  
-        os.remove("args.avro")
-        os.remove("results.avro")
+        #cmd = '/bin/bash -c "cat %s | python ../../avroInter/PyAvroInter.py write | python ../../avroInter/PyAvroInter.py read"'%(args_file.name) 
+        
+        #cmd = '/bin/bash -c "pr -t %s | python ../../avroInter/PyAvroInter.py write "' %(args_file.name)
+        #cmd = '/bin/bash -c "pr -t %s | python ../../avroInter/PyAvroInter.py write | python ../../avroInter/PyAvroInter.py read"' %(args_file.name)       
+        #cmd = '/bin/bash -c "pr -t %s | python ../../avroInter/PyAvroInter.py write | scala -classpath %s:../../avroInter %s ' %(args_file.name, self.source_dir,self.classname)
+        #cmd = '/bin/bash -c "cat %s | python ../../avroInter/PyAvroInter.py write | scala -classpath %s:../../avroInter %s | python ../../avroInter/PyAvroInter.py read"' %(args_file.name, self.source_dir,self.classname)
+        #cmd = '/bin/bash -c "python ../../avroInter/PyAvroInter.py write %s | scala -classpath %s:../../avroInter %s | python ../../avroInter/PyAvroInter.py read"' %(args_file.name, str_args,self.source_dir,self.classname)
+        
+        """
+        p = pexpect.spawn(cmd, timeout=200, maxread=40000,searchwindowsize=4000)
+        p.expect(pexpect.EOF)
+        p.close()
+        
+        if p.exitstatus == 1:
+            raise Exception("BAD RETURN CODE:\n" + str(p.before))
+                
+        """
+        #print "P BEFORE:", p.before
+        #str_res = p.before[0:self.find_close(p.before)+1]
+        #print "STRING RESULT:", str_res
+        #result = eval(str_res)
+        #print 'RESULT:', result
 
-
-        
 class PseudoModule:
     '''Pretends to be a Python module that contains the generated functions.'''
     def __init__(self):
@@ -92,8 +118,8 @@ class ScalaModule:
             source = open(filepath, 'w')
             source.write(source_string)
             source.close()
-            #print "scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath)            
-            result = os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
+            result = os.system("scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath))    
+            #result = os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
             
             os.remove(filepath)
             if result != 0:

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 PYTHONPATH=../../:$PYTHONPATH
-CLASSPATH=../../avroInter:$CLASSPATH
 
 echo PYTHONPATH
 echo ${PYTHONPATH}

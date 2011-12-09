@@ -3,7 +3,7 @@
 import org.apache.avro.generic.GenericData
 import org.apache.avro.JAvroInter
 
-object double_using_scala {
+object double {
   def double(arr: GenericData.Array[Double]): GenericData.Array[Double] = {
     var len = arr.size()
     for (i<-0 until len){
