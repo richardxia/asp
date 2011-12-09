@@ -1,8 +1,5 @@
 
-import json
 import sys
-import getopt
-import time
 from avro import schema, datafile, io
 from cStringIO import StringIO
 
@@ -136,8 +133,8 @@ def read_avro_file(insource='results.avro'):
             arg = record["arg%s"%(i)]
             #print arg
             stored.append(arg)
-        print "LAST ARG:", stored[-1]
-            
+    return stored[0]
+
 def return_stored(index):
     if stored:
         return stored[index]
@@ -166,16 +163,12 @@ def tupleToList(input):
         
 if __name__ == '__main__': 
     args = sys.argv   
-    #sys.stderr.write('\nargs receive inside pyavro:' + str(args) + "\n")
     
     if len(args) >1:
         if args[1] == 'write':
             #inputs = eval(args[2].replace('/', "'"))   
             inputs = sys.stdin.read().replace('/', "'")
             inputs = eval(inputs)
-            #sys.stderr.write("inputs:" + str(inputs)+"\n")
-            #inputs  = [[1.0*i for i in range(1000000)]]
-            #sys.stderr.write("insde write")
             write_avro_file(inputs, sys.stdout)
 
         elif args[1] == 'read':

@@ -3,77 +3,6 @@
 from array_doubler import *
 import time
 
-"""
-print "beginning 5 elements"
-start = time.time()
-arr = [1.0, 4.0, 3234324.0, 12.0]
-result = ArrayDoubler().double_using_scala(arr)
-
-end = time.time()
-elapsed = end-start
-print" elapsed time for 5 is:", elapsed
-
-
-print "beginning 1000 elements"
-start = time.time()
-arr = [1.3 for i in range(1000)]
-result = ArrayDoubler().double_using_scala(arr)
-
-end = time.time()
-elapsed1 = end-start
-print "elapsed time for 1000 is:", elapsed1
-
-"""
-
-
-
-print "warmup"
-"""
-start = time.time()
-arr = [i*1.0 for i in range(100)]
-result = ArrayDoubler().double_using_scala(arr)
-end = time.time()
-elapsed1 = end-start
-print "done with warmup:", elapsed1
-"""
-"""
-print "100 elements"
-start = time.time()
-arr = [i*1.0 for i in range(100)]
-result = ArrayDoubler().double_using_scala(arr)
-
-end = time.time()
-elapsed1 = end-start
-print "done with 100:", elapsed1
-
-print "1000 elem"
-start = time.time()
-arr = [i*1.0 for i in range(1000)]
-result = ArrayDoubler().double_using_scala(arr)
-
-end = time.time()
-elapsed1 = end-start
-print "done with 1000:", elapsed1
-
-print "10000 elem"
-start = time.time()
-arr = [i*1.0 for i in range(10000)]
-result = ArrayDoubler().double_using_scala(arr)
-
-end = time.time()
-elapsed1 = end-start
-print "done with 10000:", elapsed1
-
-print "100,000 elem"
-start = time.time()
-arr = [i*1.0 for i in range(100000)]
-result = ArrayDoubler().double_using_scala(arr)
-
-end = time.time()
-elapsed1 = end-start
-print "done with 100,000 elem:", elapsed1
-
-"""
 
 print "warmup"
 start = time.time()
@@ -105,7 +34,7 @@ end = time.time()
 elapsed1 = end-start
 print "10,0000 finished:", elapsed1
 
-
+"""
 print "100,000 elements!"
 start = time.time()
 arr = [i*1.0 for i in range(100000)]
@@ -114,7 +43,7 @@ result = ArrayDoubler().double_using_scala(arr)
 end = time.time()
 elapsed1 = end-start
 print "done with 100,000 elem:", elapsed1
-
+"""
 """
 print "1,000,000 elem"
 start = time.time()

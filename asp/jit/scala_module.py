@@ -30,33 +30,13 @@ class ScalaFunction:
         if p1.returncode != 0:
             raise Exception("Bad return code")
             
-        read_avro_file('results.avro')
+        # function call results stored below in 'results'
+        results = read_avro_file('results.avro')
+        print 'RESULTS:', results[-5:-1]
         
         os.remove('args.avro')
         os.remove('results.avro')
-        
-        #cmd = '/bin/bash -c "cat %s | python ../../avroInter/PyAvroInter.py write | python ../../avroInter/PyAvroInter.py read"'%(args_file.name) 
-        
-        #cmd = '/bin/bash -c "pr -t %s | python ../../avroInter/PyAvroInter.py write "' %(args_file.name)
-        #cmd = '/bin/bash -c "pr -t %s | python ../../avroInter/PyAvroInter.py write | python ../../avroInter/PyAvroInter.py read"' %(args_file.name)       
-        #cmd = '/bin/bash -c "pr -t %s | python ../../avroInter/PyAvroInter.py write | scala -classpath %s:../../avroInter %s ' %(args_file.name, self.source_dir,self.classname)
-        #cmd = '/bin/bash -c "cat %s | python ../../avroInter/PyAvroInter.py write | scala -classpath %s:../../avroInter %s | python ../../avroInter/PyAvroInter.py read"' %(args_file.name, self.source_dir,self.classname)
-        #cmd = '/bin/bash -c "python ../../avroInter/PyAvroInter.py write %s | scala -classpath %s:../../avroInter %s | python ../../avroInter/PyAvroInter.py read"' %(args_file.name, str_args,self.source_dir,self.classname)
-        
-        """
-        p = pexpect.spawn(cmd, timeout=200, maxread=40000,searchwindowsize=4000)
-        p.expect(pexpect.EOF)
-        p.close()
-        
-        if p.exitstatus == 1:
-            raise Exception("BAD RETURN CODE:\n" + str(p.before))
-                
-        """
-        #print "P BEFORE:", p.before
-        #str_res = p.before[0:self.find_close(p.before)+1]
-        #print "STRING RESULT:", str_res
-        #result = eval(str_res)
-        #print 'RESULT:', result
+
 
 class PseudoModule:
     '''Pretends to be a Python module that contains the generated functions.'''
