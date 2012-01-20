@@ -35,6 +35,11 @@ class ArrayDoubler(object):
         return mod.double(arr, 2, "asdfasdf")
 
     def double(self, arr):
-        return map (lambda x: x*2, arr)
+        arr2 = []
+        for a in arr:
+            arr2.append(a*2)
+        return arr2
+    
+        #return map (lambda x: x*2, arr)
         
 
