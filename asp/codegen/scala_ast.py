@@ -3,23 +3,24 @@ import codegen
 
 
 """
-I don't really seem to use the generate method
+I don't use the generate method
 """
 
-class SGenerable():
-	def generate(self):
-		raise Exception("generate method not implemented")
+class Generable():
+	pass
 
+class func_types(Generable):	
+	def __init__(self, types):
+		self.types = types
+		self._fields = []
+			
 	
-class SNumber(SGenerable):
+class Number(Generable):
 	def __init__(self, num):
 		self.num = num
 		self._fields = []
 
-	def generate(self):
-		yield str(self.num)
-
-class SString(SGenerable):
+class String(Generable):
 	def __init__(self, text):
 		self.text = text
 		self._fields = ['text']
@@ -34,11 +35,8 @@ class SString(SGenerable):
 		else:
 			self.done = True
 			return self
-	
-	def generate(self):
-		yield '\"%s\"' %self.text
 
-class SName(SGenerable):
+class Name(Generable):
 	def __init__(self,name):
 		self.name= name
 		self._fields= []
@@ -54,19 +52,38 @@ class SName(SGenerable):
 			self.done = True
 			return self
 
-	def generate(self):
-		yield self.name
+class Function(Generable):
+	def __init__(self, declaration, body):
+		self.declaration = declaration
+		self.body = body
+		self._fields = []
+		self.done= False
 
-class SFunctionBody(SGenerable):
-	pass
+	def __iter__(self):
+		return self
+	
+	def next(self):
+		if self.done:
+			raise StopIteration
+		else:
+			self.done = True
+			return self
 
-class SFunctionDec(SGenerable):
-	pass
+class Arguments(Generable):
+	def __init__(self, args):
+		self.args = args
+		
+class FunctionDeclaration(Generable):
+	def __init__(self, name, args):
+		self.name = name
+		self.args = args
 
+"""
 class Value(): #????
 	pass
+"""
 
-class SExpression(SGenerable):
+class Expression(Generable):
 	def __init__(self):
 		# ???
 		super(Expression, self)
@@ -82,26 +99,47 @@ class SExpression(SGenerable):
 		else:
 			self.done = True
 			return self
-	
-	def generate(self):
-		yield ""
 
-class SList(SExpression):
+class Call(Expression):	
+	def __init__(self, func, args):
+		self.func = func
+		self.args = args
+		self._fields = []
+		self.done= False
+
+	def __iter__(self):
+		return self
+	
+	def next(self):
+		if self.done:
+			raise StopIteration
+		else:
+			self.done = True
+			return self
+	
+class Attribute(Expression):	
+	def __init__(self, value, attr):	
+		self.attr = attr
+		self.value = value
+		
+class List(Expression):
 	def __init__(self, elements):
 		self.elements = elements
 		
+
+class Sub(Expression):		
+	def __init__(self,value, slice):
+		self.value = value
+		self.slice = slice
 		
-class SBinOp(SExpression):
+class BinOp(Expression):
 	def __init__(self, left, op, right):
 		self. left = left
 		self.op = op
 		self.right = right
 		self._fields = ['left', 'right']
 
-	def generate(self):
-		yield "(%s %s %s)" % (self.left, self.op, self.right)
-
-class SBoolOp(SExpression):
+class BoolOp(Expression):
 	def __init__(self, op, values):
 		self.op = op
 		self.values = values
@@ -118,29 +156,19 @@ class SBoolOp(SExpression):
 			self.done = True
 			return self
 
-	def generate(self):
-		yield "(%s %s %s)" % (self.left, self.op, self.right)
-
-
-class SUnaryOp(SExpression):
+class UnaryOp(Expression):
 	def __init__(self, op, operand):
 		self.op = op
 		self.operand = operand
 		self._fields = ['operand']	
-	
-	def generate(self):
-		yield "(%s (%s))" % (self.op, self.operand)
 
-class SSubscript(SExpression):
+class Subscript(Expression):
 	def __init__(self, value, index):
 		self.value = value
 		self.index = index
 		self._fields = ['value', 'index']
 
-	def generate(self):
-		yield "%s[%s]" %(self.value, self.index)
-
-class SPrint(SGenerable):
+class Print(Generable):
 	def __init__(self,text,newline):
 		self.text = text
 		self.newline = newline
@@ -156,7 +184,7 @@ class SPrint(SGenerable):
 			self.done = True
 			return self
 		
-class SReturnStatement(SGenerable):
+class ReturnStatement(Generable):
 	def __init__(self, retval):
 		self.retval = retval
 		self._fields = ['retval']
@@ -172,11 +200,25 @@ class SReturnStatement(SGenerable):
 			self.done = True
 			return self
 		
-	def generate(self):
-		ret = 'return ' + str(self.retval)
-		yield ret
+class AugAssign(Generable):
+	def __init__(self, target, op, value):
+		self.target = target
+		self.op = op
+		self.value = value
+		self.done = False
 
-class SAssign(SGenerable): #should this inherit from something else???
+	def __iter__(self):
+		return self
+	
+	def next(self):
+		if self.done:
+			raise StopIteration
+		else:
+			self.done = True
+			return self
+		
+
+class Assign(Generable): #should this inherit from something else???
 	def __init__(self, lvalue, rvalue):
 		##??
 		self.lvalue = lvalue
@@ -194,15 +236,9 @@ class SAssign(SGenerable): #should this inherit from something else???
 			self.done = True
 			return self
 		
-	def generate(self):
-		#need to correctly have left side? if new variable problematic
-		lvalue = str(self.lvalue) ## this will need to be amended
-		rvalue = str(self.rvalue)
-		yield "%s = %s" % (lvalue, rvalue)	
-		
 		
 #for some reason is not an iterable?? needs to be a sequence
-class SCompare(SGenerable):
+class Compare(Generable):
 	def __init__(self, left,op,right):
 		self.left = left
 		self.op = op
@@ -220,11 +256,12 @@ class SCompare(SGenerable):
 			self.done=True
 			return self
 		
-class SIfConv(SGenerable):
-	def __init__(self, test, body, orelse):
+class IfConv(Generable):
+	def __init__(self, test, body, orelse, inner_if=False):
 		self.test = test
 		self.body = body
 		self.orelse = orelse
+		self.inner_if = inner_if
 		self.done= False
 
 	def __iter__(self):
@@ -237,7 +274,7 @@ class SIfConv(SGenerable):
 			self.done = True
 			return self
 		
-class SFor(SGenerable): #??
+class For(Generable): #??
 	def __init__(self, target, iter, body):
 		self.target = target
 		self.iter = iter
@@ -253,11 +290,8 @@ class SFor(SGenerable): #??
 		else:
 			self.done = True
 			return self
-	
-	def generate(self):
-		pass
 
-class SWhile(SGenerable):
+class While(Generable):
 	def __init__(self, test, body):
 		self.test = test
 		self.body = body
@@ -274,8 +308,6 @@ class SWhile(SGenerable):
 			self.done = True
 			return self
 	
-	def generate(self):
-		pass
 	
 if __name__ == '__main__':
 	f= open('times4.py')

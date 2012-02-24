@@ -10,10 +10,12 @@ TO NOTE:
 import PyAvroInter as py_avro
 
 
-def generate_scala_object(mainfunc, filename = 'func.scala'):   
-    f = open(filename)
-    rendered = f.read()
-    f.close()
+def generate_scala_object(mainfunc, filename = 'func.scala', rendered=None):   
+    
+    if not rendered:
+        f = open(filename)
+        rendered = f.read()
+        f.close()
     output= """
 import org.apache.avro.JAvroInter
 
@@ -53,7 +55,7 @@ def generate_func_call(rendered, mainfunc):
         args += "arg%s" %i
         if not i== (size-1):
             args+=', '    
-    call += "results(0) = %s(%s)" %(mainfunc, args)
+    call += "results(0) = %s(%s).asInstanceOf[Object]" %(mainfunc, args)
     return call
 
 def get_arg_type(rendered, mainfunc):

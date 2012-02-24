@@ -15,7 +15,7 @@ if __name__ == '__main__':
     print 'DONE'
     print 'ORIGINAL AST RENDERED:', codegen.to_source(astt)
     print 'DONE----------------------------------------------------'
-    node = ast_tools.ConvertAST_ScalaAST().visit(astt)
+    node = ast_tools.ConvertPyAST_ScalaAST().visit(astt)
     print '______________________________________-changed ast:', ast.dump(node)
     print 'DONE'
     print 'CHANGED AST RENDERED BY CODEGEN:', codegen.to_source(node)

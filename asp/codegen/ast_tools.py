@@ -1,23 +1,29 @@
 
 from cpp_ast import *
-import cpp_ast
+import cpp_ast as cpp
+
 import python_ast as ast
 import python_ast
 
+import scala_ast as scala 
+from scala_ast import *
+
 import os
 
-"why doesn't this below line work?"
 import sys
-sys.path.append('../')
-from util import *
-#print 'SYSPATH',sys.path
-from scala_ast import *
+
+
+"why doesn't this below line work?"
+"need to put util back in"
+#sys.path.append('../')
+#from util import *
+
 
 def is_cpp_node(x):
     return isinstance(x, Generable)    
 
 def is_scala_node(x):
-    return isinstance(x, SGenerable)
+    return isinstance(x, scala.Generable)
 
 class NodeVisitorCustomNodes(ast.NodeVisitor):
     # Based on NodeTransformer.generic_visit(), but visits all sub-nodes
@@ -114,7 +120,7 @@ class ASTNodeReplacerCpp(ASTNodeReplacer):
     def is_node(self, x):
         return is_cpp_node(x)
 
-class ConvertAST(ast.NodeTransformer):
+class ConvertPyAST_CppAST(ast.NodeTransformer):
     """Class to convert from Python AST to C++ AST"""
     def visit_Num(self, node):
         return CNumber(node.n)
@@ -233,16 +239,16 @@ class ConvertAST(ast.NodeTransformer):
         return ReturnStatement(self.visit(node.value))
     
     
-class ConvertAST_ScalaAST(ast.NodeTransformer):
+class ConvertPyAST_ScalaAST(ast.NodeTransformer):
     """Class to convert from Python AST to Scala AST"""    
     def visit_Num(self,node):
-    	return SNumber(node.n)
+    	return scala.Number(node.n)
    
     def visit_Str(self,node):
-	       return SString(node.s)
+	       return scala.String(node.s)
 
     def visit_Name(self,node):
-	       return SName(node.id)
+	       return scala.Name(node.id)
 
     def visit_Add(self,node):
 	       return "+"
@@ -262,28 +268,44 @@ class ConvertAST_ScalaAST(ast.NodeTransformer):
     def visit_Not(self,node):
 	       return "!"
 
+    def visit_ClassDef(self,node):
+        pass
+    
+    
     def visit_FunctionDef(self,node):
-        #how can a function have a return type of non void???
-        return SFunctionBody(SFunctionDeclaration(Value("void", node.name),
-                                                self.visit(node.args)),
-                            Block([self.visit(x) for x in node.body]))
+        #how can a function have a return type of non void???   
+        return scala.Function(scala.FunctionDeclaration(node.name, self.visit(node.args)),
+                            [self.visit(x) for x in node.body])
+        
+    def visit_Call(self,node):
+
+        args = []
+        for a in node.args:
+            args.append(self.visit(a))
+        return scala.Call(self.visit(node.func), args)
+    
+    def visit_arguments(self,node):  
+        args = []
+        for a in node.args:
+            args.append(self.visit(a))
+        return scala.Arguments(args)
         
     def visit_Return(self,node):
-        return SReturnStatement(self.visit(node.value))
+        return scala.ReturnStatement(self.visit(node.value))
         
     # only single targets supported
     #need to fix for first time assignment...
     def visit_Assign(self, node):
         if isinstance(node, python_ast.Assign):
-            return SAssign(self.visit(node.targets[0]),
+            return scala.Assign(self.visit(node.targets[0]),
                           self.visit(node.value))
-        elif isinstance(node, scala_ast.Assign):
-            return SAssign(self.visit(node.lvalue),
+        #below happen ever?
+        elif isinstance(node, scala.Assign):
+            return scala.Assign(self.visit(node.lvalue),
                           self.visit(node.rvalue))
         
     def visit_AugAssign(self,node):
-        pass
-
+        return scala.AugAssign(self.visit(node.target), self.visit(node.op), self.visit(node.value))
     
     def visit_Print(self,node):
         text = []
@@ -293,43 +315,69 @@ class ConvertAST_ScalaAST(ast.NodeTransformer):
             text = ''
         for fragment in node.values[1:]:
             text.append(self.visit(fragment))
-        return SPrint(text, node.nl)
-    
-    
-    def visit_If(self,node):
+        return scala.Print(text, node.nl)
+        
+    def visit_If(self,node, inner_if = False):  
         test = self.visit(node.test)
         body = [self.visit(x) for x in node.body]
         
         if node.orelse == []:
             orelse = None
         else:
-            orelse = Block([self.visit(x) for x in node.orelse])
-        return SIfConv(test, body, orelse)
+            if isinstance(node.orelse[0], ast.If):
+                orelse = [self.visit_If(node.orelse[0], True)]
+            else:
+                orelse = [self.visit(x) for x in node.orelse]
+
+        if inner_if:
+            return scala.IfConv(test,body, orelse, True)
+        else:
+            return scala.IfConv(test, body, orelse)
+    
+    def visit_Subscript(self,node):
+        return scala.Sub(self.visit(node.value),self.visit(node.slice))
+        #return S(node.value, node.slice)
     
     def visit_List(self,node):
         elements = []
         for e in node.elts:
             elements.append(self.visit(e))
-        return SList(elements)
+        return scala.List(elements)
     
+    def visit_Tuple(self,node):
+        
+        if node.elts:
+            first = node.elts[0]
+            if type(first) == ast.Str and first.s == 'TYPE_DECS':
+                return scala.func_types(node.elts[1:])        
+        elements = []
+        for e in node.elts:
+            elements.append(self.visit(e))
+        return scala.List(elements)
+            
+    """"
+    only for loops of type below work:
+        for item in list:
+    cannot use ranges yet..        
+    """        
     def visit_For(self,node):
-        print 'TARGET:', node.target
-        print 'ITER:', node.iter
-        print 'BODY:', node.body
-        print 'ORELSE:', node.orelse
         body = [self.visit(x) for x in node.body]
-        return SFor(self.visit(node.target), self.visit(node.iter), body)
+        return scala.For(self.visit(node.target), self.visit(node.iter), body)
 
+
+    
     def visit_While(self,node):
         newbody = []
         for stmt in node.body:
             newbody.append(self.visit(stmt))
-        return SWhile(self.visit(node.test), newbody)
+        return scala.While(self.visit(node.test), newbody)
 
     def visit_Expr(self,node):
         return self.visit(node.value)
-
-    
+   
+    def visit_Attribute(self,node):
+        return scala.Attribute(self.visit(node.value), node.attr)
+        
     def visit_Compare(self, node):
         # only handles 1 thing on right side for now (1st op and comparator)
         # also currently not handling: Is, IsNot, In, NotIn
@@ -337,28 +385,19 @@ class ConvertAST_ScalaAST(ast.NodeTransformer):
         op = ops[node.ops[0].__class__.__name__]
         left = self.visit(node.left)
         right = self.visit(node.comparators[0])
-        print 'LEFT IS:',left
-        print 'OP IS:', op
-        print 'RIGHT IS:', right
-        return SCompare(left, op, right)
+        return scala.Compare(left, op, right)
         
     def visit_BinOp(self,node):
-        print 'INSIDE VISIT BINOP'
-        return SBinOp(self.visit(node.left), self.visit(node.op),self.visit(node.right))
+        return scala.BinOp(self.visit(node.left), self.visit(node.op),self.visit(node.right))
 
     def visit_BoolOp(self,node):
-        print 'INSIDE BOOLOP'
-        #print 'BOOLOP LEFT:', node.left
-        print 'OP:', node.op
-        #print 'BOOLOP RIGHT:', node.right
-        print 'VALUES:', node.values
         values = []
         for v in node.values:
             values.append(self.visit(v))
-        return SBoolOp(self.visit(node.op), values)
+        return scala.BoolOp(self.visit(node.op), values)
     
     def visit_UnaryOp(self,node):
-	       return SUnaryOp(self.visit(node.op), self.visit(node.operand))
+	       return scala.UnaryOp(self.visit(node.op), self.visit(node.operand))
   
 
 class LoopUnroller(object):

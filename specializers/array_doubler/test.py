@@ -3,6 +3,24 @@
 from array_doubler import *
 import time
 
+"""
+import asp.codegen.ast_tools as ast_tools
+
+#import ast_tools
+from scala_ast import *
+from cpp_ast import *
+import codegen
+import codegenScala
+import ast
+""" 
+
+print 'start test'
+arr = [1,2,3,4]
+result = ArrayDoubler().double_py2scala(arr)
+print 'done with test and result is:', result
+
+
+"""
 
 print "warmup"
 start = time.time()
@@ -34,7 +52,7 @@ end = time.time()
 elapsed1 = end-start
 print "10,0000 finished:", elapsed1
 
-"""
+
 print "100,000 elements!"
 start = time.time()
 arr = [i*1.0 for i in range(100000)]

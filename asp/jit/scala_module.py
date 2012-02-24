@@ -32,10 +32,11 @@ class ScalaFunction:
             
         # function call results stored below in 'results'
         results = read_avro_file('results.avro')
-        print 'RESULTS:', results[-5:-1]
+        #print 'RESULTS:', results
         
         os.remove('args.avro')
         os.remove('results.avro')
+        return results
 
 
 class PseudoModule:

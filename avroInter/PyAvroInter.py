@@ -1,17 +1,19 @@
 
 import sys
+
+#must add these files to python classpath
 from avro import schema, datafile, io
 from cStringIO import StringIO
 
 """
 PYTHON            JSON        AVRO
-dict            object        record
-list,tuple        array        array
-str,unicode        string        string
-int,long,float    number        float,double?
-True            true            boolean
+dict             object        record
+list,tuple       array        array
+str,unicode      string        string
+int,long,float   number        float,double?
+True             true            boolean
 False            false            boolean
-None            null            null
+None             null            null
 
 JSON    AVRO
 null    null
@@ -163,7 +165,10 @@ def tupleToList(input):
         
 if __name__ == '__main__': 
     args = sys.argv   
-    
+    inputs = [1,2,3,4]
+    write_avro_file(inputs)
+    print read_avro_file()
+    """
     if len(args) >1:
         if args[1] == 'write':
             #inputs = eval(args[2].replace('/', "'"))   
@@ -177,3 +182,4 @@ if __name__ == '__main__':
             raise Exception("Unknown first arg type. Valid options are 'read' or 'write'")
     else:
         raise Exception("More arguments required")
+    """

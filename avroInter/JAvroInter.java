@@ -4,6 +4,8 @@ import java.util.List;
 //import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
+
+//must add these below files to java classpath
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
@@ -16,6 +18,16 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.util.Utf8;
 
+
+/*
+ * 
+ * 
+ * how to set the java classpath so these files can be anywhere?
+ * wait, where should they be put, if not in here?
+ * oh, put them in the java packages files?
+ * 
+ * if we decide just to arbitrarily put them somewhere 
+ */
 import java.io.*;
 /**
  * 
@@ -186,7 +198,8 @@ public class JAvroInter{
 	 */
 	
 	public <T> T returnStored(int index){
-		return (T)stored[index]; 
+		System.stderr.println("INSIDE RETURN STORE FOR INDEX:" + 0);
+		return stored[index].asInstanceOf[T]; 
 	}
 	
 	/**
@@ -237,7 +250,15 @@ public class JAvroInter{
 		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		//String words = br.readLine();
 		//System.out.println("sys in: "+ words);
-		JAvroInter j = new JAvroInter("System.out", "System.in");
+		JAvroInter j = new JAvroInter("results.avro", "args.avro");
+		
+		j.printStored();
+		
+		Object[] arr = {8,9,10,22};
+		j.writeAvroFile(arr);
+		System.out.println("DONE");
+		
+		/**
 		Integer d = j.returnStored(1);
 		System.out.println("here's d: " + d);
 		//String s = j.returnStored(2);
