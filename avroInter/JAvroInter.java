@@ -1,9 +1,10 @@
-package org.apache.avro;
+package javro;
 
 import java.util.List;
 //import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
+
 
 //must add these below files to java classpath
 import org.apache.avro.Schema;
@@ -17,7 +18,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.util.Utf8;
-
+import java.io.*;
 
 /*
  * 
@@ -28,7 +29,6 @@ import org.apache.avro.util.Utf8;
  * 
  * if we decide just to arbitrarily put them somewhere 
  */
-import java.io.*;
 /**
  * 
  * TO NOTE: 
@@ -54,6 +54,7 @@ public class JAvroInter{
 	public JAvroInter(String outputFile, String inputFile) throws IOException, IllegalAccessException,InstantiationException,ClassNotFoundException{
 		OUTPUT_FILE_NAME = outputFile;
 		INPUT_FILE_NAME = inputFile;
+		//System.exit(1);
 		this.readAvroFile();
 	}
 	
@@ -156,13 +157,13 @@ public class JAvroInter{
 	public void readAvroFile() throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
 		File file = new File(INPUT_FILE_NAME);
 		double start= System.nanoTime();
-		
+		//System.exit(1);
 		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
 		double end = System.nanoTime();
 		double elapsed = end-start;
 		//System.out.println("rdinstant:"+elapsed);
 		GenericRecord record;
-		
+		//System.exit(1);
 		if (INPUT_FILE_NAME == "System.in"){
 			DataFileStream dfs = new DataFileStream(System.in, reader);
 			record = (GenericRecord)dfs.next();
@@ -198,8 +199,9 @@ public class JAvroInter{
 	 */
 	
 	public <T> T returnStored(int index){
-		System.stderr.println("INSIDE RETURN STORE FOR INDEX:" + 0);
-		return stored[index].asInstanceOf[T]; 
+		//System.stderr.println("INSIDE RETURN STORE FOR INDEX:" + 0);
+		//return stored[index].asInstanceOf[T]; 
+		return (T)stored[index];
 	}
 	
 	/**
@@ -255,7 +257,7 @@ public class JAvroInter{
 		j.printStored();
 		
 		Object[] arr = {8,9,10,22};
-		j.writeAvroFile(arr);
+		//j.writeAvroFile(arr);
 		System.out.println("DONE");
 		
 		/**

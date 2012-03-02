@@ -24,7 +24,7 @@ class ArrayDoubler(object):
         import avroInter.avro_backend as avro_backend
         mod = asp_module.ASPModule(use_scala=True)
                         
-        rendered = avro_backend.generate_scala_object("double","func1.scala")
+        rendered = avro_backend.generate_scala_object("double","func1.scala")        
         """
         f = open("func.scala")
         rendered = f.read()
@@ -48,9 +48,15 @@ class ArrayDoubler(object):
         
         func_ast_py = ast.parse(rendered_py)               
         func_ast_scala = ast_tools.ConvertPyAST_ScalaAST().visit(func_ast_py)               
-        rendered_scala = codegenScala.to_source(func_ast_scala)        
-        rendered = avro_backend.generate_scala_object("double","",rendered_scala)        
-        mod.add_function("double", rendered, backend="scala")   
+        rendered_scala = codegenScala.to_source(func_ast_scala)     
+        # the first arg below specifies the main function in the set of input functions, 
+        # the one to be called first by main with the input args   
+        rendered = avro_backend.generate_scala_object("double","",rendered_scala)  
+        
+        #NOTE: must name function differently here than the mainfunc above
+        # because classpaths get goofed up if they're named the same as in the above line
+        # Also, in the final line, be sure to call it by the name added below     
+        mod.add_function("double_outer", rendered, backend="scala")   
         
         print 'RENDERED PY IS:', rendered_py         
         print '-------------------------------------------------------------'      
@@ -59,7 +65,7 @@ class ArrayDoubler(object):
         print 'FULLY RENDERED SCALA WITH MAIN IS:', rendered
         print '-------------------------------------------------------------'
          
-        return mod.double(arr)
+        return mod.double_outer(arr)
         
     def double(self, arr):
         arr2 = [1,2,3]               

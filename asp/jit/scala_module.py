@@ -23,8 +23,9 @@ class ScalaFunction:
     
     def __call__(self, *args, **kwargs):
                    
-        write_avro_file(args, 'args.avro')        
-        p1 = subprocess.Popen(['scala', '-classpath', self.source_dir + ':../../avroInter', self.classname], stdin=None, stdout=subprocess.PIPE)
+        write_avro_file(args, 'args.avro')  
+        class_path =self.source_dir  + ':../../avroInter:'
+        p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
         p1.wait()
                  
         if p1.returncode != 0:

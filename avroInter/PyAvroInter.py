@@ -165,9 +165,10 @@ def tupleToList(input):
         
 if __name__ == '__main__': 
     args = sys.argv   
-    inputs = [1,2,3,4]
+    inputs = [[1,2,3,9]]
     write_avro_file(inputs)
-    print read_avro_file()
+    #print read_avro_file('args.avro')
+    #print read_avro_file('results.avro')
     """
     if len(args) >1:
         if args[1] == 'write':

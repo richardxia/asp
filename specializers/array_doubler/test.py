@@ -14,10 +14,15 @@ import codegenScala
 import ast
 """ 
 
+
 print 'start test'
-arr = [1,2,3,4]
+arr = [1,2,8,9]
+start =time.time()
 result = ArrayDoubler().double_py2scala(arr)
+end = time.time()
+
 print 'done with test and result is:', result
+print 'TOTAL TIME IS:', end-start
 
 
 """

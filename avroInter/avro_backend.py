@@ -12,15 +12,16 @@ import PyAvroInter as py_avro
 
 def generate_scala_object(mainfunc, filename = 'func.scala', rendered=None):   
     
+    mainfuncouter = mainfunc + "_outer"
     if not rendered:
         f = open(filename)
         rendered = f.read()
         f.close()
     output= """
-import org.apache.avro.JAvroInter
+import javro.JAvroInter
 
 object %s{ 
-    """%(mainfunc)
+    """%(mainfuncouter)
     output += rendered
     output += generate_scala_main(rendered, mainfunc)    
     output += """
@@ -34,11 +35,14 @@ object %s{
 def generate_scala_main(rendered, mainfunc):
     
     main = """
-    def main(args: Array[String]){
+    def main(args: Array[String]){  
+        
         var s = new JAvroInter("results.avro", "args.avro") 
         var results = new Array[Object](1)
         %s
-        s.writeAvroFile(results)
+        s.writeAvroFile(results)   
+        
+        //println("AT THE END OF MAIN")   
         
     }
     """ %(generate_func_call(rendered,mainfunc))
