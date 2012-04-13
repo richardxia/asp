@@ -19,6 +19,8 @@ def generate_scala_object(mainfunc, filename = 'func.scala', rendered=None):
         f.close()
     output= """
 import javro.JAvroInter
+import org.apache.avro.Schema
+
 
 object %s{ 
     """%(mainfuncouter)
@@ -36,14 +38,11 @@ def generate_scala_main(rendered, mainfunc):
     
     main = """
     def main(args: Array[String]){  
-        
         var s = new JAvroInter("results.avro", "args.avro") 
         var results = new Array[Object](1)
         %s
         s.writeAvroFile(results)   
-        
-        //println("AT THE END OF MAIN")   
-        
+                
     }
     """ %(generate_func_call(rendered,mainfunc))
     return main

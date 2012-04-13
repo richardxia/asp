@@ -267,7 +267,11 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
 
     def visit_Not(self,node):
 	       return "!"
-
+    
+    """
+    def visit_BinOp(self,node):
+        print 'INSIDE BINOP WITH NODE;', node
+    """    
     def visit_ClassDef(self,node):
         pass
     
@@ -315,7 +319,7 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
             text = ''
         for fragment in node.values[1:]:
             text.append(self.visit(fragment))
-        return scala.Print(text, node.nl)
+        return scala.Print(text, node.nl, node.dest)
         
     def visit_If(self,node, inner_if = False):  
         test = self.visit(node.test)
@@ -335,7 +339,13 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
             return scala.IfConv(test, body, orelse)
     
     def visit_Subscript(self,node):
-        return scala.Sub(self.visit(node.value),self.visit(node.slice))
+        context= ''
+        if type(node.ctx) == ast.Store:
+            context ='store'
+        elif type(node.ctx) == ast.Load:
+            context = 'load'
+        else: raise Exception ("Unknown Subscript Context")
+        return scala.Subscript(self.visit(node.value),self.visit(node.slice), context)
         #return S(node.value, node.slice)
     
     def visit_List(self,node):

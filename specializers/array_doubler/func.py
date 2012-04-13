@@ -10,7 +10,7 @@ def double(arr):
     size = arr.size()    
     i = 0
     while (i < size):
-        arr.set(i,2 * arr.get(i))
+        arr[i] = 2 * arr[i]
         i += 1
     return arr
 

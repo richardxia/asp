@@ -48,7 +48,9 @@ TYPES = {
     'double': 'Double',
     'string': 'String', 
     'boolean': 'Boolean',
+    'null': 'Unit'
     }
+
 """
 POSSIBLE TYPES:
 int
@@ -58,6 +60,7 @@ string
 (array, type) i.e. (array, int)
 boolean
 specific class name
+null
 """
 
 
@@ -74,9 +77,28 @@ def to_source(node):
     
     return ''.join(generator.result)
 
-global types
-types = {}
+def getArrType(elmts, for_schema = True):
+    if not elmts:
+        raise Exception("Need to provide at least one element of array to specify array type")
+    if isinstance(elmts, scala_ast.List):
+        return getArrType(elmts.elements)
+    first = elmts[0]
+    if isinstance(first, scala_ast.List):
+        arr_type = getArrType(elmts[0])
+     
+        if for_schema: return '{\\"type\\": \\"array\\", \\"items\\": \\"%s\\"}'%(arr_type)   
+        else: 
+            if arr_type in TYPES.keys():arr_type = TYPES[arr_type]  
+            return 'org.apache.avro.generic.GenericData.Array[%s]' %(arr_type)        
 
+    elif isinstance(first, scala_ast.String):
+        return 'string'
+    elif isinstance(first, scala_ast.Number):
+        return 'double'
+    else:
+        print 'T IS:', t
+        raise Exception("Unrecognized type")
+        
 
 def convert_types(input_type):
     if len(input_type) == 2 and input_type[0] == 'array':
@@ -84,29 +106,33 @@ def convert_types(input_type):
     elif input_type in TYPES:
         return TYPES[input_type]
     else:
-        print 'WARNING POTENTIAL SCALA TYPE MISMATCH'
+        print 'WARNING POTENTIAL SCALA TYPE MISMATCH OF:', input_type
         return input_type
 
 class SourceGenerator(NodeVisitor):
-
-    """
-    def write(self, x):
-        if self.new_lines:
-            if self.result:
-                self.result.append('\n' * self.new_lines)
-            self.result.append(self.indent_with * self.indentation)
-            self.new_lines = 0
-        self.result.append(x)
-    """
-  
-    types = {}
     
     def __init__(self):
         self.result = []
-        self.new_lines=0
+        self.new_lines = 0
         self.indentation =0
         self.indent_with=' ' * 4
+        self.stored_vals = {}
+        self.current_func = ''
+        self.prev_func = ''
+        self.vars = {}       
+        self.types = {}
+        self.subl_count = 0
         
+    def already_def(self, var):
+        if self.current_func in self.vars.keys():
+            if var in self.vars[self.current_func]:
+                return True
+            else: return False
+    
+    def store_var(self,var):
+        if self.current_func in self.vars.keys():
+            self.vars[self.current_func].append(var)
+        else: self.vars[self.current_func] = [var]            
     
     def write(self,x):
         if self.new_lines:
@@ -141,13 +167,15 @@ class SourceGenerator(NodeVisitor):
             for arg in func[1]:
                 scala_arg_types.append(convert_types(arg))
             scala_ret_type = convert_types(func[2])
-            types[name] = [scala_arg_types, scala_ret_type]    
+            self.types[name] = [scala_arg_types, scala_ret_type]    
         
     def visit_Number(self, node):
         self.write(repr(node.num))
 
     def visit_String(self, node):
+        self.write('"')
         self.write(repr(node.text))
+        self.write('"')
     
     def visit_Name(self, node):
         self.write(node.name)
@@ -157,9 +185,18 @@ class SourceGenerator(NodeVisitor):
         self.generic_visit(node)
 
     def visit_BinOp(self, node):
-        self.visit(node.left)
-        self.write(' ' + node.op + ' ')
-        self.visit(node.right)
+        if type(node.op) == ast.Pow:
+            self.write('math.pow(')
+            self.visit(node.left)
+            self.write(', ')
+            self.visit(node.right)
+            self.write(')')
+        else:
+            self.write('(')
+            self.visit(node.left)
+            self.write(' ' + node.op + ' ')
+            self.visit(node.right)
+            self.write(')')
     
     def visit_BoolOp(self,node):
         self.newline(node)
@@ -187,11 +224,28 @@ class SourceGenerator(NodeVisitor):
         self.visit(node.operand)
         self.write(')')
 
-    def visit_Subscript(self, node):
-        self.visit(node.value)
-        self.write('[')
-        self.visit(node.index) #???
-        self.write(']')
+    def visit_Subscript(self, node):        
+        if node.context == 'load':
+            if isinstance(node.index, ast.Slice):
+                self.write('scala_lib.slice(')
+                self.visit(node.value)
+                self.write(', ')
+                self.visit(node.index.lower)
+                self.write(', ')
+                self.visit(node.index.upper)
+                self.write(')')
+            else:
+                self.visit(node.value)
+                self.write('.get(')
+                self.visit(node.index)
+                self.write(')')
+        else: 
+            self.visit(node.value)
+            self.write('.set(')
+            if isinstance(node.index, ast.Slice):
+                raise Exception("Slice assign not supported")
+            self.visit(node.index)
+            #will finish this in assign
         
         
     #what about newline stuff?? sort of n    
@@ -200,75 +254,178 @@ class SourceGenerator(NodeVisitor):
     
     def visit_Print(self, node):
         self.newline(node)
+        if node.dest:
+            self.write('System.err.')
         self.write('println(')
+        plus = False
+        print 'NODE.TEXT IS:', node.text
         for t in node.text: 
-            #print 'T IN TEXT IS:', t.text     
+            #print 'T IN TEXT IS:', t.text   
+            if plus: self.write('+" " + ')  
+            #self.write('"')
             self.visit(t)
-            if t != node.text[-1]:
-                self.write('+" " + ')
+            #self.write('"')
+            plus = True
         self.write(')')
 
+
+    def visit_subList(self, node, lhsvar): 
+        elmts = node.elements
+        temp_vars = []
+        for sublist in elmts:
+            temp_name = 'subL%s'%(self.subl_count)
+            self.subl_count +=1
+            temp_vars.append(temp_name)
+            asgn = scala_ast.Assign(scala_ast.Name(temp_name), sublist)
+            self.visit_Assign(asgn)
+            self.newline(node)
+            self.visit(lhsvar)
+            self.write(".add(%s)"%(temp_name))
+            
     def visit_List(self, node):
         elmts = node.elements
-        self.write('Array(')
-        for e in elmts:
-            self.visit(e)
-            if e != elmts[-1]:
-                self.write(',')
-        self.write(')')
+        arr_type = getArrType(elmts)
+        if self.already_def('str'):
+            if len(arr_type) > 20:
+                self.write('str = \"{\\"type\\": \\"array\\", \\"items\\": %s}\"'%(arr_type))
+            else:   
+                self.write('str = \"{\\"type\\": \\"array\\", \\"items\\": \\"%s\\"}\"'%(arr_type))
+        else:
+            #self.vars[self.current_func]
+            self.store_var('str')            
+            if len(arr_type) > 20:
+                self.write('var str = \"{\\"type\\": \\"array\\", \\"items\\": %s}\"'%(arr_type))  
+            else: 
+                self.write('var str = \"{\\"type\\": \\"array\\", \\"items\\": \\"%s\\"}\"'%(arr_type))  
+        self.newline(node)
+        if self.already_def('schema'):
+            self.write('schema = (new Schema.Parser()).parse(str)')
+        else: 
+            self.store_var('schema')
+            self.write('var schema: Schema = (new Schema.Parser()).parse(str)')
+        self.newline(node)
+        lhsvar = self.stored_vals["lvalue"]
+        self.write('var ')
+        self.store_var(lhsvar.name)
+        self.visit(lhsvar)
+        self.write(' = ')
+        arr_type = getArrType(elmts, False)
+        if arr_type in TYPES.keys():
+            arr_type = TYPES[arr_type]
+        self.write('new org.apache.avro.generic.GenericData.Array[%s](1,%s)'%(arr_type, 'schema'))
+        #print 'ELMTS ARE:', elmts
+        if elmts and isinstance(elmts[0], scala_ast.List):
+            self.visit_subList(node, lhsvar)
+        else:
+            for e in elmts:            
+                self.newline(node)
+                self.visit(lhsvar)
+                self.write(".add(")
+                self.visit(e)
+                self.write(')')
+                        
     
     def visit_Attribute(self,node):
-        value = self.visit(node.value)
-        self.write('.' + node.attr)
-        
-    def visit_Sub(self,node):  
         self.visit(node.value)
-        self.write('(')      
-        self.visit(node.slice)
-        self.write(')')
+        self.write('.' + node.attr)
     
     def visit_Call(self,node):
-        self.newline(node)
-        self.visit(node.func)
-        self.write('(')
-        for a in node.args:
-            self.visit(a)
-            if a != node.args[-1]:
-                self.write(', ')
-        self.write(')')
+        self.newline(node)             
+        if isinstance(node.func,scala_ast.Name):
+            if node.func.name == 'range':
+                self.write('Range(0,')
+                self.visit(node.args[0])
+                self.write(')')
+            elif node.func.name == 'len':
+                self.visit(node.args[0])
+                self.write('.size()')
+            elif node.func.name == 'int':
+                self.visit(node.args[0])
+                self.write('.asInstanceOf[Int]')
+            elif node.func.name == 'float':
+                self.visit(node.args[0])
+                self.write('.asInstanceOf[Double]')
+            else:
+                self.visit(node.func)
+                self.write('(')
+                comma = False
+                for a in node.args:
+                    if comma: self.write(', ')
+                    self.visit(a)
+                    comma = True
+                self.write(')')            
+        elif isinstance(node.func,scala_ast.Attribute):
+            if node.func.attr == 'append':
+                self.visit(node.func.value)            
+                self.write('.add(')
+                self.visit(node.args[0])
+                self.write(')')
+            elif node.func.attr == 'extend':
+                self.write('scala_lib.extend(')
+                self.visit(node.func.value)
+                self.write(',')
+                self.visit(node.args[0])
+                self.write(')')
+            elif node.func.attr == 'sample':
+                self.write('scala_lib.rand_sample(')
+                for a in node.args:
+                    self.visit(a)
+                    if a != node.args[-1]:
+                        self.write(', ')                
+                self.write(')')    
+            elif node.func.attr == 'choice':
+                self.write('scala_lib.rand_choice(')    
+                self.visit(node.args[0])
+                self.write(')')                        
+            else:
+                self.visit(node.func)
+                self.write('(')
+                comma = False
+                for a in node.args:
+                    if comma: self.write(', ')
+                    self.visit(a)
+                    comma = True
+                self.write(')')   
         
     def visit_Function(self,node):
         self.newline(node)
         self.visit(node.declaration)
         self.write('{ ')
+        
         self.body(node.body)
+        self.current_func = self.prev_func
         self.write("\n}")
     
     def visit_FunctionDeclaration(self,node):
-        self.write('def '+node.name+'( ')        
-        
-        arg_types = types[node.name][0]
-        ret_type = types[node.name][1]
+        self.write('def '+node.name+'( ')    
+        self.prev_func = self.current_func    
+        self.current_func = node.name
+        arg_types = self.types[node.name][0]
+        ret_type = self.types[node.name][1]
         
         self.visit_Arguments(node.args, arg_types)
         self.write('): %s =' %(ret_type))
         
-    def visit_Arguments(self,node, types=None):        
+    def visit_Arguments(self,node, types=None):   
+        comma = False     
         for i in range(len(node.args)):
+            if comma:self.write(', ')
             arg = node.args[i]
             self.visit(arg)
             if types:
                 self.write(': %s' %types[i])
             else:
                 self.write(': Any')
-            if arg!= node.args[-1]:
-                self.write(', ')
+            comma = True
 
     
     def visit_ReturnStatement(self, node):
         self.newline(node)
         self.write('return ')
+        print 'NODE RETVAL IS:', node.retval
+        self.new_lines = -1
         self.visit(node.retval)
+        self.new_lines = 0
         
     def visit_Compare(self,node):
         self.newline(node,-1)
@@ -283,26 +440,35 @@ class SourceGenerator(NodeVisitor):
         self.visit(node.target)
         self.write(' ' + node.op +'= ')
         self.visit(node.value)
-        
+                   
     def visit_Assign(self,node):
         try:
             if node.lvalue.name == 'TYPE_DECS':
                 self.visit(node.rvalue)
                 return 0
-        except:
-            pass
-        
+        except: pass        
         self.newline(node)       
-        if not isinstance(node.lvalue, Sub):
-            self.write('var ')
-        #print 'NODE LVALUE:', type(node.lvalue)
-        self.visit(node.lvalue)
-        self.write(' = ')
-        
-        self.new_lines = -1
-        self.visit(node.rvalue)
-        self.new_lines = 0
-    
+        self.stored_vals["lvalue"] = node.lvalue
+        if isinstance(node.lvalue, Subscript):
+            self.visit(node.lvalue)
+            self.write(', ')
+            self.visit(node.rvalue)
+            self.write(')')
+        elif isinstance(node.rvalue, scala_ast.List):
+            self.visit(node.rvalue)
+        else:
+            #print 'NODE LVALUE:', type(node.lvalue)
+            if not self.already_def(node.lvalue.name):
+                self.write('var ')
+                self.store_var(node.lvalue.name)
+            self.visit(node.lvalue)
+            self.write(' = ')
+            
+            self.new_lines = -1
+            self.visit(node.rvalue)
+            self.new_lines = 0
+
+            
     def visit_IfConv(self,node):
         self.newline(node)
         if node.inner_if:
@@ -349,7 +515,7 @@ class SourceGenerator(NodeVisitor):
     def visit_While(self, node):
         self.newline(node)
         self.write('while (')
-        self.new_lines = -234234
+        #self.new_lines = -1
         self.visit(node.test)
         self.write(') {')
         self.newline(node)

@@ -201,6 +201,8 @@ public class JAvroInter{
 	public <T> T returnStored(int index){
 		//System.stderr.println("INSIDE RETURN STORE FOR INDEX:" + 0);
 		//return stored[index].asInstanceOf[T]; 
+		//System.err.println("IN RET STORED");
+		//System.err.println("ITEM IS:"+ stored[index]);
 		return (T)stored[index];
 	}
 	

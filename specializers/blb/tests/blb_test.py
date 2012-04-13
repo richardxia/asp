@@ -9,15 +9,16 @@ class ScalaTests(unittest.TestCase):
     """
 
     def test_MeanMean(self):
-        arr = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        data = [i*1.0 for i in range(500)]
         blb = BLB()
-        blb.compute_estimates = ScalaTests.mean
-        blb.reduce_bootstraps = ScalaTests.mean
-        blb.average = ScalaTests.mean
 
-        result = blb.run(arr)
-        self.assertTrue(abs(result[0] - 3.5) < 1.3)
+        result = blb.blb_py2scala(data,25, 50,.5)
+        print 'FINAL RESULT IS:', result  
+        self.assertTrue(abs(result - 250) < 20)
+        
+        
 
+"""
     def test_SDMean(self):
         arr = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
         blb = BLB()
@@ -47,6 +48,6 @@ class ScalaTests(unittest.TestCase):
 
         result = blb.run(arr)
         self.assertTrue(result[0] < 0.3)
-
+"""
 if __name__ == '__main__':
     unittest.main()

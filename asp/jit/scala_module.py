@@ -22,13 +22,17 @@ class ScalaFunction:
  
     
     def __call__(self, *args, **kwargs):
-                   
+        
         write_avro_file(args, 'args.avro')  
         class_path =self.source_dir  + ':../../avroInter:'
+        call = "scala -cp %s %s" %(class_path, self.classname)
+        #print 'CALL IS:', call
         p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
         p1.wait()
-                 
+        #print 'RIGHT AFTER'
         if p1.returncode != 0:
+            print 'RET CODE IS:', p1
+            print 'CODE ACT IS;', p1.returncode
             raise Exception("Bad return code")
             
         # function call results stored below in 'results'

@@ -16,7 +16,7 @@ import ast
 
 
 print 'start test'
-arr = [1,2,8,9]
+arr = [1,3,8,9]
 start =time.time()
 result = ArrayDoubler().double_py2scala(arr)
 end = time.time()

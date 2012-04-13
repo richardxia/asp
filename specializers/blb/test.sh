@@ -14,4 +14,4 @@ then
     PYTHONARGS=
 fi
 
-PYTHONPATH=`pwd`:${PYTHONPATH} ${PYTHON} ${PYTHONARGS} tests/blb_test.py
+PYTHONPATH=`pwd`:${PYTHONPATH} CLASSPATH=${CLASSPATH} ${PYTHON} ${PYTHONARGS} tests/blb_test.py

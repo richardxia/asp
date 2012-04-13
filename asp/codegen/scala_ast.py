@@ -19,6 +19,17 @@ class Number(Generable):
 	def __init__(self, num):
 		self.num = num
 		self._fields = []
+		self.done= False
+
+	def __iter__(self):
+		return self
+	
+	def next(self):
+		if self.done:
+			raise StopIteration
+		else:
+			self.done = True
+			return self
 
 class String(Generable):
 	def __init__(self, text):
@@ -72,16 +83,12 @@ class Function(Generable):
 class Arguments(Generable):
 	def __init__(self, args):
 		self.args = args
+		self._fields = []
 		
 class FunctionDeclaration(Generable):
 	def __init__(self, name, args):
 		self.name = name
 		self.args = args
-
-"""
-class Value(): #????
-	pass
-"""
 
 class Expression(Generable):
 	def __init__(self):
@@ -125,12 +132,7 @@ class Attribute(Expression):
 class List(Expression):
 	def __init__(self, elements):
 		self.elements = elements
-		
-
-class Sub(Expression):		
-	def __init__(self,value, slice):
-		self.value = value
-		self.slice = slice
+		self._fields = []
 		
 class BinOp(Expression):
 	def __init__(self, left, op, right):
@@ -138,6 +140,7 @@ class BinOp(Expression):
 		self.op = op
 		self.right = right
 		self._fields = ['left', 'right']
+		self.done = False
 
 class BoolOp(Expression):
 	def __init__(self, op, values):
@@ -163,15 +166,17 @@ class UnaryOp(Expression):
 		self._fields = ['operand']	
 
 class Subscript(Expression):
-	def __init__(self, value, index):
+	def __init__(self, value, index, context):
 		self.value = value
 		self.index = index
-		self._fields = ['value', 'index']
+		self.context = context
+		self._fields = ['value', 'index', 'context']
 
 class Print(Generable):
-	def __init__(self,text,newline):
+	def __init__(self,text,newline,dest):
 		self.text = text
 		self.newline = newline
+		self.dest= dest
 		self.done = False
 		
 	def __iter__(self):
