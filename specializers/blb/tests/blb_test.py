@@ -8,13 +8,15 @@ class ScalaTests(unittest.TestCase):
             return math.sqrt(arr.map(x => (x-mean)*(x-mean)).reduce(_+_))/(arr.length - 1)
     """
 
-    def test_MeanMean(self):
-        data = [i*1.0 for i in range(500)]
-        blb = BLB()
+#just call blb.run(....,.., use_scala=True) so one function for all blb funcs
 
-        result = blb.blb_py2scala(data,25, 50,.5)
+    def test_MeanMean(self):
+        data = tuple([i*1.0 for i in range(5000)])
+        blb = BLB(25, 50, .5, use_scala=True)
+        
+        result = blb.run(*data)
         print 'FINAL RESULT IS:', result  
-        self.assertTrue(abs(result - 250) < 20)
+        self.assertTrue(abs(result - len(data)/2) < 20)
         
         
 

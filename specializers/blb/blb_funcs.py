@@ -11,6 +11,9 @@ TYPE_DECS = ('TYPE_DECS',
 
 DIM = 1
 
+## data passed in is a numpy array and then figure out DIM
+## translate for i in range(len(data))
+
 def compute_estimate(data):
     avg = 0.0
     if len(data)==0: return avg
