@@ -1,12 +1,14 @@
 package javro;
 
 import java.util.List;
+
+
 //import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 
-//must add these below files to java classpath
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
@@ -20,15 +22,7 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.util.Utf8;
 import java.io.*;
 
-/*
- * 
- * 
- * how to set the java classpath so these files can be anywhere?
- * wait, where should they be put, if not in here?
- * oh, put them in the java packages files?
- * 
- * if we decide just to arbitrarily put them somewhere 
- */
+
 /**
  * 
  * TO NOTE: 
@@ -203,7 +197,20 @@ public class JAvroInter{
 		//return stored[index].asInstanceOf[T]; 
 		//System.err.println("IN RET STORED");
 		//System.err.println("ITEM IS:"+ stored[index]);
-		return (T)stored[index];
+		Object item = stored[index];
+		String name = item.getClass().getName();
+		if (name == "org.apache.avro.generic.GenericData$Array"){
+			//assumes all arrays are of type Double
+			//double[] d = new double[1];
+			ArrayList arr = new ArrayList((List)stored[index]);
+			// should I just create a new adapater class and return that? ehhhhh
+			//return (T)stored[index];
+			scala_arr d = new scala_arr(arr);
+			return (T)d;
+		}
+		else{
+			return (T)stored[index];
+		}
 	}
 	
 	/**
@@ -240,6 +247,7 @@ public class JAvroInter{
 		System.out.println("end printing args");		
 	}
 	
+	
 	public static void main(String[] args) throws IOException, IllegalAccessException, ClassNotFoundException, InstantiationException{
 		/**
 		double start = System.nanoTime();
@@ -262,14 +270,42 @@ public class JAvroInter{
 		//j.writeAvroFile(arr);
 		System.out.println("DONE");
 		
-		/**
-		Integer d = j.returnStored(1);
+		Object d = j.returnStored(0);
+		//GenericData.Array arr2 = (GenericData.Array)d;
+		//Object d = j.returnStored(0);
+		
+		
+		//ArrayList<Double> p = new ArrayList<Double>();
+		//p.add(3.23);
+		System.out.println(((scala_arr)d).apply(0));
+		System.out.println(((scala_arr)d).apply(0).getClass());
+		
 		System.out.println("here's d: " + d);
+		System.out.println("its class is:" + d.getClass());
+		
+		/**
+		Double[] ar = p.toArray(new Double[1]);
+
+		System.out.println("here's d: " + ar);
+		System.out.println("its class is:" + ar.getClass());
+		
+		double[] m = new double[3];
+		System.out.println("here's d: " + m);
+		System.out.println("its class is:" + m.getClass());		                        
+		/**
+		ArrayList al = new ArrayList((List)d);
+		
+		System.out.println("here's d: " + al);
+		System.out.println("its class is:" + al.getClass());
+		System.out.println("here's d: " + al.get(0));
+		System.out.println("here's d: " + al.get(0).getClass());
+		**/
+
 		//String s = j.returnStored(2);
 		//System.out.println(s);
-		Object[] results = new Object[1];
-		results[0]  = "asdfasdf";
-		j.writeAvroFile(results);
+		//Object[] results = new Object[1];
+		//results[0]  = "asdfasdf";
+		//j.writeAvroFile(results);
 		
 		//need to print contents of system.out???????????
 		//BufferedReader br = new BufferedReader(new InputStreamReader(System.out));
@@ -287,33 +323,6 @@ public class JAvroInter{
 			System.out.println("caught urrror: "+ ioe);
 		}
 		
-		
-		
-		/**
-		System.out.println("begin making a");
-		Object[] a = new Double[100000];
-		for (int i=0; i<100000; i++){
-			a[i] = 1.0;
-		}
-		System.out.println("end making a");
-		
-		start = System.nanoTime();
-		//j.writeAvroFile(a);
-		end = System.nanoTime();
-		elapsed = end-start;
-		System.out.println("w-time:"+ elapsed);
-		
-		start = System.nanoTime();
-		Double str = j.returnStored(1);
-		end = System.nanoTime();
-		elapsed = end-start;
-		System.out.println("r-time:" + elapsed);
-		
-		Object[] arr = {1,2,3};
-		int i = (Integer)(arr[1]);
-		//List lis = java.util.Arrays.asList(ArrayUtils.toObject(a));
-		**/ 
-		 
 	}
 	/**
 	 *  The below commented out methods were made in an attempt to convert avro given classes,

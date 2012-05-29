@@ -70,6 +70,8 @@ ALL_SYMBOLS.update(BINOP_SYMBOLS)
 ALL_SYMBOLS.update(CMPOP_SYMBOLS)
 ALL_SYMBOLS.update(UNARYOP_SYMBOLS)
 
+
+"TODO add a from avro option for special array modifications"
 def to_source(node):
     types = {}
     generator = SourceGenerator()
@@ -102,7 +104,8 @@ def getArrType(elmts, for_schema = True):
 
 def convert_types(input_type):
     if len(input_type) == 2 and input_type[0] == 'array':
-        return 'org.apache.avro.generic.GenericData.Array[%s]' % (convert_types(input_type[1]))
+        #return 'org.apache.avro.generic.GenericData.Array[%s]' % (convert_types(input_type[1]))
+        return 'Array[%s]' % (convert_types(input_type[1]))
     elif input_type in TYPES:
         return TYPES[input_type]
     else:
@@ -236,7 +239,7 @@ class SourceGenerator(NodeVisitor):
                 self.write(')')
             else:
                 self.visit(node.value)
-                self.write('.get(')
+                self.write('(')
                 self.visit(node.index)
                 self.write(')')
         else: 
@@ -338,7 +341,7 @@ class SourceGenerator(NodeVisitor):
                 self.write(')')
             elif node.func.name == 'len':
                 self.visit(node.args[0])
-                self.write('.size()')
+                self.write('.length')
             elif node.func.name == 'int':
                 self.visit(node.args[0])
                 self.write('.asInstanceOf[Int]')

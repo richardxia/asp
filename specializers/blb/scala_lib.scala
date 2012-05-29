@@ -2,6 +2,8 @@
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.Schema
 import util.Random
+import java.util.ArrayList;
+
 
 
 object scala_lib{

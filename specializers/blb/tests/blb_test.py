@@ -16,7 +16,7 @@ class ScalaTests(unittest.TestCase):
         
         result = blb.run(*data)
         print 'FINAL RESULT IS:', result  
-        self.assertTrue(abs(result - len(data)/2) < 20)
+        self.assertTrue(abs(result - len(data)/2) < len(data)/90)
         
         
 

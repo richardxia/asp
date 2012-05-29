@@ -21,13 +21,17 @@ class ScalaFunction:
         return index
  
     
-    def __call__(self, *args, **kwargs):
-        
+    def __call__(self, *args, **kwargs):        
         write_avro_file(args, 'args.avro')  
-        class_path =self.source_dir  + ':../../avroInter:'
-        call = "scala -cp %s %s" %(class_path, self.classname)
-        #print 'CALL IS:', call
-        p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
+        class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
+        #call = "/home/vagrant/spark/run -cp %s %s" %(class_path, self.classname)
+        
+        "call for regular scala"
+        #p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
+        
+        "call to run through spark"
+        p1 = subprocess.Popen(['/home/vagrant/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
+        
         p1.wait()
         #print 'RIGHT AFTER'
         if p1.returncode != 0:
@@ -91,6 +95,7 @@ class ScalaModule:
         else: 
             if not os.path.isdir(cache_dir):
                 os.makedirs(cache_dir)
+        
 
         source_string = self.generate()
         hex_checksum = self.calculate_hex_checksum(source_string)
@@ -104,6 +109,9 @@ class ScalaModule:
             source = open(filepath, 'w')
             source.write(source_string)
             source.close()
+            print 'ORIGINAL MOD CACHE DIR IS:' + mod_cache_dir
+            
+            #sys.exit(-1)
             result = os.system("scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath))    
             #result = os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
             
