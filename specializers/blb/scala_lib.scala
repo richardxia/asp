@@ -5,7 +5,6 @@ import util.Random
 import java.util.ArrayList;
 
 
-
 object scala_lib{
 
 	def getType(item: Object): String ={

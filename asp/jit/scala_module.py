@@ -23,9 +23,11 @@ class ScalaFunction:
     
     def __call__(self, *args, **kwargs):        
         write_avro_file(args, 'args.avro')  
-        class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
-        #call = "/home/vagrant/spark/run -cp %s %s" %(class_path, self.classname)
+        #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
         
+        "below is for in the cloud..have cloud option?"
+        prefix = os.environ['CLASSPATH']
+        class_path = prefix +':'+self.source_dir + ':/root/sejits/asp/avroInter'
         "call for regular scala"
         #p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
         
