@@ -2,6 +2,7 @@
 import java.util.ArrayList;
 import spark._
 import SparkContext._
+import javro.scala_arr
 
 var master = "local" //?????? how to get master
 var sc = new SparkContext(master, "Blb")
@@ -54,7 +55,7 @@ def subsample(data: ArrayList[Object], subsample_len_exp:Double): Array[Double] 
 	return subsample
 }
 
-def run(data: javro.scala_arr[Double], num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
+def run(data: scala_arr[Double], num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
 	val broadcastData = sc.broadcast(data.stored)	
 	var arr = data.stored
 	var run_func = (x:Double)=>{

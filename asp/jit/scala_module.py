@@ -30,7 +30,8 @@ class ScalaFunction:
         #p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
         
         "call to run through spark"
-        p1 = subprocess.Popen(['/home/vagrant/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
+        # need to fix for running in the cloud
+        p1 = subprocess.Popen(['/root/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
         
         p1.wait()
         #print 'RIGHT AFTER'
@@ -109,9 +110,8 @@ class ScalaModule:
             source = open(filepath, 'w')
             source.write(source_string)
             source.close()
-            print 'ORIGINAL MOD CACHE DIR IS:' + mod_cache_dir
+            #print 'ORIGINAL MOD CACHE DIR IS:' + mod_cache_dir
             
-            #sys.exit(-1)
             result = os.system("scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath))    
             #result = os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
             
