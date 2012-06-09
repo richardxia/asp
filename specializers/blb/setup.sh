@@ -16,8 +16,7 @@ tar -zxvf codepy-2012.1.2.tar.gz
 cd codepy-2012.1.2
 python setup.py build
 python setup.py install
-yum install numpy
-y
+yum -y install numpy
 
 cd ~
 mkdir avro
@@ -40,7 +39,8 @@ cd ..
 wget http://jackson.codehaus.org/1.9.6/jackson-all-1.9.6.jar
 unzip jackson-all-1.9.6.jar
 
-export CLASSPATH=$CLASSPATH:~/avro:/root/spark/core/target/spark-core-assembly-0.4-SNAPSHOT.jar
+echo "export CLASSPATH=\$CLASSPATH:~/avro:/root/spark/core/target/spark-core-assembly-0.4-SNAPSHOT.jar" >> ~/.bash_profile
+source ~/.bash_profile
 
 cd ~/sejits/asp/specializers/blb
 chmod +x test.sh

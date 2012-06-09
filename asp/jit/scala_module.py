@@ -25,21 +25,24 @@ class ScalaFunction:
         write_avro_file(args, 'args.avro')  
         #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
         
-        "below is for in the cloud..have cloud option?"
         prefix = os.environ['CLASSPATH']
         class_path = prefix +':'+self.source_dir + ':/root/sejits/asp/avroInter'
         "call for regular scala"
         #p1 = subprocess.Popen(['scala', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
         
-        "call to run through spark"
-        # need to fix for running in the cloud
-        p1 = subprocess.Popen(['/root/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)
+        p= subprocess.Popen(['./make_jar', self.source_dir])
+        p.wait()
+        os.environ['FILE_LOC'] = self.source_dir + "/source.jar"
         
+        p1 = subprocess.Popen(['MASTER=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)'])
         p1.wait()
-        #print 'RIGHT AFTER'
+        
+        "call to run through spark"      
+        p2 = subprocess.Popen(['/root/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)        
+        p2.wait()
         if p1.returncode != 0:
-            print 'RET CODE IS:', p1
-            print 'CODE ACT IS;', p1.returncode
+            print 'RET CODE IS:', p2
+            print 'CODE ACT IS;', p2.returncode
             raise Exception("Bad return code")
             
         # function call results stored below in 'results'

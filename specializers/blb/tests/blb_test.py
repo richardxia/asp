@@ -11,7 +11,7 @@ class ScalaTests(unittest.TestCase):
 #just call blb.run(....,.., use_scala=True) so one function for all blb funcs
 
     def test_MeanMean(self):
-        data = tuple([i*1.0 for i in range(5000)])
+        data = tuple([i*1.0 for i in xrange(5000)])
         blb = BLB(25, 50, .5, use_scala=True)
         
         result = blb.run(*data)

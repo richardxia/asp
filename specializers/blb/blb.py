@@ -15,7 +15,24 @@ from blb_setup import gslroot, cache_dir
 
 def combine(blb_funcs):
     parent = (open('blb_core_parallel.scala')).read()  
-    return parent + blb_funcs
+    head = """
+import java.util.ArrayList;
+import spark._
+import SparkContext._
+import javro.scala_arr
+
+var sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
+
+def run(data: scala_arr[Double], num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
+    val broadcastData = sc.broadcast(data.stored)    
+    val bnum_bootstraps = sc.broadcast(num_bootstraps)
+    val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
+
+    var run_func = (x:Double)=>{
+"""
+    return head + blb_funcs + parent + blb_funcs + '\n' + 'return average( sc.parallelize(new Array[Double](num_subsamples)).map(run_func).collect() ) }'
+
+
 
 
 class BLB:
