@@ -46,7 +46,7 @@ source ~/.bash_profile
 cd ~/sejits/asp/specializers/blb
 chmod +x test.sh
 
-chmod +x make_jar
+chmod +x ~/sejits/asp/asp/jit/make_jar
 
 
 

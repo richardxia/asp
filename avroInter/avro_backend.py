@@ -9,26 +9,31 @@ TO NOTE:
 
 import PyAvroInter as py_avro
 
-
-def generate_scala_object(mainfunc, filename = 'func.scala', rendered=None):   
+def generate_scala_object(mainfunc, filename=None, rendered=None):   
     
-    mainfuncouter = mainfunc + "_outer"
-    if not rendered:
+    class_name = mainfunc + "_outer"
+    if not rendered and filename:
         f = open(filename)
         rendered = f.read()
         f.close()
-    output= """
+    
+    output = """
+class %s{
+    %s
+}
+    """ %(class_name + "_data", rendered)
+    
+    output+= """
 import javro.JAvroInter
 import org.apache.avro.Schema
-
+import javro.scala_arr
 
 object %s{ 
-    """%(mainfuncouter)
-    output += rendered
+    """%(class_name)
     output += generate_scala_main(rendered, mainfunc)    
     output += """
 }
-    """
+"""
     #print 'output is ', output
     return output
 
@@ -58,7 +63,7 @@ def generate_func_call(rendered, mainfunc):
         args += "arg%s" %i
         if not i== (size-1):
             args+=', '    
-    call += "results(0) = %s(%s).asInstanceOf[Object]" %(mainfunc, args)
+    call += "results(0) = %s(%s).asInstanceOf[Object]" %('(new ' +mainfunc +'_outer_data()).' + mainfunc, args)
     return call
 
 def get_arg_type(rendered, mainfunc):

@@ -18,8 +18,7 @@ class ScalaTests(unittest.TestCase):
         print 'FINAL RESULT IS:', result  
         self.assertTrue(abs(result - len(data)/2) < len(data)/90)
         
-        
-
+    
 """
     def test_SDMean(self):
         arr = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]

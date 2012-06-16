@@ -15,25 +15,7 @@ from blb_setup import gslroot, cache_dir
 
 def combine(blb_funcs):
     parent = (open('blb_core_parallel.scala')).read()  
-    head = """
-import java.util.ArrayList;
-import spark._
-import SparkContext._
-import javro.scala_arr
-
-var sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
-
-def run(data: scala_arr[Double], num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
-    val broadcastData = sc.broadcast(data.stored)    
-    val bnum_bootstraps = sc.broadcast(num_bootstraps)
-    val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
-
-    var run_func = (x:Double)=>{
-"""
-    return head + blb_funcs + parent + blb_funcs + '\n' + 'return average( sc.parallelize(new Array[Double](num_subsamples)).map(run_func).collect() ) }'
-
-
-
+    return parent + blb_funcs 
 
 class BLB:
     known_reducers= ['mean', 'stdev', 'mean_norm', 'noop']
@@ -86,7 +68,6 @@ class BLB:
             return self.average(subsample_estimates)
         elif self.use_scala: 
             #mod = asp_module.ASPModule(cache_dir="/home/vagrant/spark/examples/target/scala-2.9.1.final/classes/", use_scala=True)      
-            "call for in the cloud below"
             mod = asp_module.ASPModule(cache_dir = "/root/spark/examples/target/scala-2.9.1.final/classes/", use_scala=True)
             f = open('blb_funcs.py')
             rendered_py = f.read()     
@@ -96,17 +77,15 @@ class BLB:
             rendered_scala = codegenScala.to_source(funcs_ast_scala)     
             
             rendered_scala = combine(rendered_scala)
-            
-            # the first arg below specifies the main function in the set of input functions, 
-            # the one to be called first by main with the input args
             rendered = avro_backend.generate_scala_object("run","",rendered_scala)             
             #NOTE: must append outer to function name above to get the classname            
             mod.add_function("run_outer", rendered, backend = "scala")   
-            
+            """
+            #unused
             f = open('scala_lib.scala')        
             rendered_scala_lib = f.read()
             mod.add_function('lib', rendered_scala_lib, backend="scala")
-            
+            """
             print 
             print 'FULLY RENDERED SCALA WITH MAIN IS:', rendered
             print '-------------------------------------------------------------'

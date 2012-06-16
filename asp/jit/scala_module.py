@@ -38,10 +38,8 @@ class ScalaFunction:
             print 'CODE ACT IS;', p1.returncode
             raise Exception("Bad return code")
             
-        # function call results stored below in 'results'
         results = read_avro_file('results.avro')
         #print 'RESULTS:', results
-        
         os.remove('args.avro')
         os.remove('results.avro')
         return results
@@ -104,15 +102,10 @@ class ScalaModule:
         if not os.path.isdir(mod_cache_dir):
             os.makedirs(mod_cache_dir)
             filepath = os.path.join(mod_cache_dir, "asp_tmp.scala")
-
             source = open(filepath, 'w')
             source.write(source_string)
-            source.close()
-            #print 'ORIGINAL MOD CACHE DIR IS:' + mod_cache_dir
-            
-            result = os.system("scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath))    
-            #result = os.system("scalac -d %s %s" % (mod_cache_dir, filepath))
-            
+            source.close()            
+            result = os.system("scalac -d %s -cp %s %s" % (mod_cache_dir, "../../avroInter", filepath))                
             os.remove(filepath)
             if result != 0:
                 os.system("rm -rf " +  mod_cache_dir)

@@ -165,8 +165,12 @@ def tupleToList(input):
         
 if __name__ == '__main__': 
     args = sys.argv   
-    inputs = [[1,2,3,9]]
+    inputs = [[1.0*i for i in xrange(1000000)]]
+    import time
+    start = time.time()
     write_avro_file(inputs)
+    end = time.time()
+    print "total write time is:" + str(end-start)
     #print read_avro_file('args.avro')
     #print read_avro_file('results.avro')
     """
