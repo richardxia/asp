@@ -163,28 +163,13 @@ def tupleToList(input):
             output[i] = list(output[i])
     return output
         
+
 if __name__ == '__main__': 
     args = sys.argv   
-    inputs = [[1.0*i for i in xrange(1000000)]]
+    inputs = [[1.0*i for i in xrange(10000000)]]
     import time
+    print "about to write"
     start = time.time()
     write_avro_file(inputs)
     end = time.time()
-    print "total write time is:" + str(end-start)
-    #print read_avro_file('args.avro')
-    #print read_avro_file('results.avro')
-    """
-    if len(args) >1:
-        if args[1] == 'write':
-            #inputs = eval(args[2].replace('/', "'"))   
-            inputs = sys.stdin.read().replace('/', "'")
-            inputs = eval(inputs)
-            write_avro_file(inputs, sys.stdout)
-
-        elif args[1] == 'read':
-            read_avro_file('results.avro')
-        else:
-            raise Exception("Unknown first arg type. Valid options are 'read' or 'write'")
-    else:
-        raise Exception("More arguments required")
-    """
+    print "done writing"

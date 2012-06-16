@@ -34,8 +34,6 @@ class ScalaFunction:
         p1 = subprocess.Popen(['/root/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)        
         p1.wait()
         if p1.returncode != 0:
-            print 'RET CODE IS:', p1
-            print 'CODE ACT IS;', p1.returncode
             raise Exception("Bad return code")
             
         results = read_avro_file('results.avro')

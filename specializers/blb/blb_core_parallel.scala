@@ -51,6 +51,7 @@ def subsample(data: ArrayList[Object], subsample_len_exp:Double): Array[Double] 
 }
 def run(data: scala_arr[Double], num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
 	var sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
+	var data = (new JAvroInter("out.avro", "data.avro")).returnStored[scala_arr[Double]](0)
 	val broadcastData = sc.broadcast(data.stored)	
 	val bnum_bootstraps = sc.broadcast(num_bootstraps)
 	val bsubsample_len_exp = sc.broadcast(subsample_len_exp)

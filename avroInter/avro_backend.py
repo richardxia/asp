@@ -18,15 +18,16 @@ def generate_scala_object(mainfunc, filename=None, rendered=None):
         f.close()
     
     output = """
+import javro.JAvroInter
+import org.apache.avro.Schema
+import javro.scala_arr
+
 class %s{
     %s
 }
     """ %(class_name + "_data", rendered)
     
     output+= """
-import javro.JAvroInter
-import org.apache.avro.Schema
-import javro.scala_arr
 
 object %s{ 
     """%(class_name)

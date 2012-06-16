@@ -21,23 +21,24 @@ yum -y install numpy
 cd ~
 mkdir avro
 cd avro
-wget http://www.fightrice.com/mirrors/apache//avro/avro-1.5.4/py/avro-1.5.4.tar.gz
-tar -zxvf avro-1.5.4.tar.gz
-cd avro-1.5.4
+wget http://apache.osuosl.org/avro/avro-1.6.3/py/avro-1.6.3.tar.gz
+tar -zxvf avro-1.6.3.tar.gz
+cd avro-1.6.3
 python setup.py build
 python setup.py install
 
 cd ..
 mkdir java_avro
 cd java_avro
-wget http://www.fightrice.com/mirrors/apache//avro/avro-1.5.4/java/avro-1.5.4.jar
-unzip avro-1.5.4.jar
+wget http://www.trieuvan.com/apache/avro/avro-1.6.3/java/avro-1.6.3.jar
+unzip avro-1.6.3.jar
 mv org ~/avro
 
 cd ..
 
 wget http://jackson.codehaus.org/1.9.6/jackson-all-1.9.6.jar
 unzip jackson-all-1.9.6.jar
+mv codehaus/ ~/avro/org
 
 echo "export CLASSPATH=\$CLASSPATH:~/avro:/root/spark/core/target/spark-core-assembly-0.4-SNAPSHOT.jar" >> ~/.bash_profile
 echo "export MASTER=master@$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):5050" >> ~/.bash_profile

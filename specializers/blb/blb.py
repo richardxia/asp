@@ -78,19 +78,15 @@ class BLB:
             
             rendered_scala = combine(rendered_scala)
             rendered = avro_backend.generate_scala_object("run","",rendered_scala)             
-            #NOTE: must append outer to function name above to get the classname            
+            #NOTE: must append outer to function name above to get the classname 
+            # because of how scala_object created by avro_backend           
             mod.add_function("run_outer", rendered, backend = "scala")   
-            """
-            #unused
-            f = open('scala_lib.scala')        
-            rendered_scala_lib = f.read()
-            mod.add_function('lib', rendered_scala_lib, backend="scala")
-            """
+
             print 
             print 'FULLY RENDERED SCALA WITH MAIN IS:', rendered
             print '-------------------------------------------------------------'
             
-            return mod.run_outer(list(data), self.num_subsamples, self.num_bootstraps, self.subsample_len_exp)            
+            return mod.run_outer(self.num_subsamples, self.num_bootstraps, self.subsample_len_exp)            
         else:
             f = self.fingerprint(data)
             mod = None
