@@ -63,7 +63,6 @@ specific class name
 null
 """
 
-
 ALL_SYMBOLS = {}
 ALL_SYMBOLS.update(BOOLOP_SYMBOLS)
 ALL_SYMBOLS.update(BINOP_SYMBOLS)
@@ -73,10 +72,8 @@ ALL_SYMBOLS.update(UNARYOP_SYMBOLS)
 
 "TODO add a from avro option for special array modifications"
 def to_source(node):
-    types = {}
     generator = SourceGenerator()
     generator.visit(node)
-    
     return ''.join(generator.result)
 
 def getArrType(elmts, for_schema = True):
@@ -87,18 +84,15 @@ def getArrType(elmts, for_schema = True):
     first = elmts[0]
     if isinstance(first, scala_ast.List):
         arr_type = getArrType(elmts[0])
-     
         if for_schema: return '{\\"type\\": \\"array\\", \\"items\\": \\"%s\\"}'%(arr_type)   
         else: 
             if arr_type in TYPES.keys():arr_type = TYPES[arr_type]  
             return 'org.apache.avro.generic.GenericData.Array[%s]' %(arr_type)        
-
     elif isinstance(first, scala_ast.String):
         return 'string'
     elif isinstance(first, scala_ast.Number):
         return 'double'
     else:
-        print 'T IS:', t
         raise Exception("Unrecognized type")
         
 
@@ -113,8 +107,7 @@ def convert_types(input_type):
         return input_type
 
 class SourceGenerator(NodeVisitor):
-    
-    def __init__(self):
+    def __init__(self, func_types):
         self.result = []
         self.new_lines = 0
         self.indentation =0
@@ -125,7 +118,17 @@ class SourceGenerator(NodeVisitor):
         self.vars = {}       
         self.types = {}
         self.subl_count = 0
-        
+        self.set_func_types(func_types)
+
+    
+    def to_source(self, node):
+        self.result = []
+        self.visit(node)
+        return ''.join(self.result)      
+     
+    def add_func_type(self, type):
+        self.types.append(type)
+             
     def already_def(self, var):
         if self.current_func in self.vars.keys():
             if var in self.vars[self.current_func]:
@@ -151,7 +154,6 @@ class SourceGenerator(NodeVisitor):
         else:
             self.new_lines = max(self.new_lines, 1 + extra)
 
-
     def body(self, statements):
         self.new_line = True
         self.indentation += 1
@@ -159,11 +161,9 @@ class SourceGenerator(NodeVisitor):
             self.visit(stmt)
         self.indentation -= 1
 
-    def visit_func_types(self,node):
+    def set_func_types(self,types):
         source = []
-        for t in node.types:
-            source.append(eval(codegen.to_source(t)))
-        for func in source:
+        for func in types:
             name = func[0]
             #convert types somewhere?
             scala_arg_types, scala_ret_type = [],[]
@@ -177,7 +177,7 @@ class SourceGenerator(NodeVisitor):
 
     def visit_String(self, node):
         self.write('"')
-        self.write(repr(node.text))
+        self.write(node.text)
         self.write('"')
     
     def visit_Name(self, node):
@@ -204,6 +204,9 @@ class SourceGenerator(NodeVisitor):
     def visit_BoolOp(self,node):
         self.newline(node)
         self.write('(')
+        self.write('ADSFASDFASDFASDFDSF')
+        print 'NODE OP IS:' , node.op
+        print 'NODE OP TYPE IS:' , type(node.op)
         op = BOOLOP_SYMBOLS[type(node.op)]             
         self.visit(node.values[0])
         if op == 'and':
@@ -218,10 +221,8 @@ class SourceGenerator(NodeVisitor):
     
     def visit_UnaryOp(self, node):
         self.write('(')
-        op = UNARYOP_SYMBOLS[type(node.op)]  #needs to be fixed. won't work
+        op = UNARYOP_SYMBOLS[type(node.op)] 
         self.write(op)  
-        if op == 'not':
-            self.write(op)
         if op == 'not':
             self.write(' ')
         self.visit(node.operand)
@@ -250,7 +251,6 @@ class SourceGenerator(NodeVisitor):
             self.visit(node.index)
             #will finish this in assign
         
-        
     #what about newline stuff?? sort of n    
     #will need to replace outer 's with "" s ...
     #to do the above, for SString add a flag that if set the 's are removed
@@ -261,16 +261,11 @@ class SourceGenerator(NodeVisitor):
             self.write('System.err.')
         self.write('println(')
         plus = False
-        print 'NODE.TEXT IS:', node.text
         for t in node.text: 
-            #print 'T IN TEXT IS:', t.text   
             if plus: self.write('+" " + ')  
-            #self.write('"')
             self.visit(t)
-            #self.write('"')
             plus = True
         self.write(')')
-
 
     def visit_subList(self, node, lhsvar): 
         elmts = node.elements
@@ -316,7 +311,6 @@ class SourceGenerator(NodeVisitor):
         if arr_type in TYPES.keys():
             arr_type = TYPES[arr_type]
         self.write('new org.apache.avro.generic.GenericData.Array[%s](1,%s)'%(arr_type, 'schema'))
-        #print 'ELMTS ARE:', elmts
         if elmts and isinstance(elmts[0], scala_ast.List):
             self.visit_subList(node, lhsvar)
         else:
@@ -326,69 +320,78 @@ class SourceGenerator(NodeVisitor):
                 self.write(".add(")
                 self.visit(e)
                 self.write(')')
-                        
-    
+                           
     def visit_Attribute(self,node):
         self.visit(node.value)
         self.write('.' + node.attr)
     
+    def evaluate_func(self,node):
+        if node.func.name == 'range':
+            self.write('Range(0,')
+            self.visit(node.args[0])
+            self.write(')')
+        elif node.func.name == 'len':
+            self.visit(node.args[0])
+            self.write('.length')
+        elif node.func.name == 'int':
+            self.visit(node.args[0])
+            self.write('.asInstanceOf[Int]')
+        elif node.func.name == 'str':
+            self.write("Integer.parseInt(")
+            self.visit(node.args[0])
+            self.write(')')
+        elif node.func.name == 'float':
+            self.visit(node.args[0])
+            self.write('.asInstanceOf[Double]')
+        else:
+            self.visit(node.func)
+            self.write('(')
+            comma = False
+            for a in node.args:
+                if comma: self.write(', ')
+                self.visit(a)
+                comma = True
+            self.write(')')         
+        
+    def evaluate_attr_func(self,node):
+        if node.func.attr == 'append':
+            self.visit(node.func.value)            
+            self.write('.add(')
+            self.visit(node.args[0])
+            self.write(')')
+        elif node.func.attr == 'extend':
+            self.write('scala_lib.extend(')
+            self.visit(node.func.value)
+            self.write(',')
+            self.visit(node.args[0])
+            self.write(')')
+        elif node.func.attr == 'sample':
+            self.write('scala_lib.rand_sample(')
+            for a in node.args:
+                self.visit(a)
+                if a != node.args[-1]:
+                    self.write(', ')                
+            self.write(')')    
+        elif node.func.attr == 'choice':
+            self.write('scala_lib.rand_choice(')    
+            self.visit(node.args[0])
+            self.write(')')                        
+        else:
+            self.visit(node.func)
+            self.write('(')
+            comma = False
+            for a in node.args:
+                if comma: self.write(', ')
+                self.visit(a)
+                comma = True
+            self.write(')')                 
+        
     def visit_Call(self,node):
         self.newline(node)             
         if isinstance(node.func,scala_ast.Name):
-            if node.func.name == 'range':
-                self.write('Range(0,')
-                self.visit(node.args[0])
-                self.write(')')
-            elif node.func.name == 'len':
-                self.visit(node.args[0])
-                self.write('.length')
-            elif node.func.name == 'int':
-                self.visit(node.args[0])
-                self.write('.asInstanceOf[Int]')
-            elif node.func.name == 'float':
-                self.visit(node.args[0])
-                self.write('.asInstanceOf[Double]')
-            else:
-                self.visit(node.func)
-                self.write('(')
-                comma = False
-                for a in node.args:
-                    if comma: self.write(', ')
-                    self.visit(a)
-                    comma = True
-                self.write(')')            
+            self.evaluate_func(node)   
         elif isinstance(node.func,scala_ast.Attribute):
-            if node.func.attr == 'append':
-                self.visit(node.func.value)            
-                self.write('.add(')
-                self.visit(node.args[0])
-                self.write(')')
-            elif node.func.attr == 'extend':
-                self.write('scala_lib.extend(')
-                self.visit(node.func.value)
-                self.write(',')
-                self.visit(node.args[0])
-                self.write(')')
-            elif node.func.attr == 'sample':
-                self.write('scala_lib.rand_sample(')
-                for a in node.args:
-                    self.visit(a)
-                    if a != node.args[-1]:
-                        self.write(', ')                
-                self.write(')')    
-            elif node.func.attr == 'choice':
-                self.write('scala_lib.rand_choice(')    
-                self.visit(node.args[0])
-                self.write(')')                        
-            else:
-                self.visit(node.func)
-                self.write('(')
-                comma = False
-                for a in node.args:
-                    if comma: self.write(', ')
-                    self.visit(a)
-                    comma = True
-                self.write(')')   
+            self.evaluate_attr_func(node)
         
     def visit_Function(self,node):
         self.newline(node)
@@ -420,12 +423,10 @@ class SourceGenerator(NodeVisitor):
             else:
                 self.write(': Any')
             comma = True
-
     
     def visit_ReturnStatement(self, node):
         self.newline(node)
         self.write('return ')
-        print 'NODE RETVAL IS:', node.retval
         self.new_lines = -1
         self.visit(node.retval)
         self.new_lines = 0
@@ -460,24 +461,20 @@ class SourceGenerator(NodeVisitor):
         elif isinstance(node.rvalue, scala_ast.List):
             self.visit(node.rvalue)
         else:
-            #print 'NODE LVALUE:', type(node.lvalue)
             if not self.already_def(node.lvalue.name):
                 self.write('var ')
                 self.store_var(node.lvalue.name)
             self.visit(node.lvalue)
-            self.write(' = ')
-            
+            self.write(' = ')       
             self.new_lines = -1
             self.visit(node.rvalue)
             self.new_lines = 0
-
-            
+         
     def visit_IfConv(self,node):
         self.newline(node)
         if node.inner_if:
             if isinstance(node.orelse[0], IfConv) :
-                self.write('else if (')                           
-                
+                self.write('else if (')                                           
             else:
                 self.write('else if (')
                 self.visit(node.test)

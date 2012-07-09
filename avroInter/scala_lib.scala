@@ -40,6 +40,3 @@ class scala_arr[A](arr: ArrayList[Object]) extends Seq[A]{
 
 
 
-
-
-

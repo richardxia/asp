@@ -1,23 +1,15 @@
 
 from cpp_ast import *
 import cpp_ast as cpp
-
 import python_ast as ast
 import python_ast
-
 import scala_ast as scala 
 from scala_ast import *
-
 import os
-
-import sys
-
-
-"why doesn't this below line work?"
-"need to put util back in"
-#sys.path.append('../')
-#from util import *
-
+try:
+    from asp.util import *
+except Exception,e:
+    pass    
 
 def is_cpp_node(x):
     return isinstance(x, Generable)    
@@ -264,20 +256,11 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
 
     def visit_Mod(self,node):
 	       return "%"
-
-    def visit_Not(self,node):
-	       return "!"
     
-    """
-    def visit_BinOp(self,node):
-        print 'INSIDE BINOP WITH NODE;', node
-    """    
     def visit_ClassDef(self,node):
         pass
     
-    
     def visit_FunctionDef(self,node):
-        #how can a function have a return type of non void???   
         return scala.Function(scala.FunctionDeclaration(node.name, self.visit(node.args)),
                             [self.visit(x) for x in node.body])
         
@@ -298,7 +281,6 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
         return scala.ReturnStatement(self.visit(node.value))
         
     # only single targets supported
-    #need to fix for first time assignment...
     def visit_Assign(self, node):
         if isinstance(node, python_ast.Assign):
             return scala.Assign(self.visit(node.targets[0]),
@@ -346,7 +328,6 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
             context = 'load'
         else: raise Exception ("Unknown Subscript Context")
         return scala.Subscript(self.visit(node.value),self.visit(node.slice), context)
-        #return S(node.value, node.slice)
     
     def visit_List(self,node):
         elements = []
@@ -354,16 +335,18 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
             elements.append(self.visit(e))
         return scala.List(elements)
     
-    def visit_Tuple(self,node):
-        
+    def visit_Tuple(self,node):        
         if node.elts:
             first = node.elts[0]
             if type(first) == ast.Str and first.s == 'TYPE_DECS':
-                return scala.func_types(node.elts[1:])        
-        elements = []
-        for e in node.elts:
-            elements.append(self.visit(e))
-        return scala.List(elements)
+                return scala.func_types(node.elts[1:])     
+            else: 
+                elements =[]
+                for e in node.elts:
+                    elements.append(self.visit(e))
+                return scala.List(elements)
+        else:
+            return scala.List([])
             
     """"
     only for loops of type below work:
@@ -373,8 +356,6 @@ class ConvertPyAST_ScalaAST(ast.NodeTransformer):
     def visit_For(self,node):
         body = [self.visit(x) for x in node.body]
         return scala.For(self.visit(node.target), self.visit(node.iter), body)
-
-
     
     def visit_While(self,node):
         newbody = []

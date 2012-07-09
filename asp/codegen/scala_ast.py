@@ -3,7 +3,7 @@ import codegen
 
 
 """
-I don't use the generate method
+I don't use the Generable class inheritance
 """
 
 class Generable():
@@ -12,8 +12,7 @@ class Generable():
 class func_types(Generable):	
 	def __init__(self, types):
 		self.types = types
-		self._fields = []
-			
+		self._fields = []			
 	
 class Number(Generable):
 	def __init__(self, num):

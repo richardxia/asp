@@ -129,13 +129,11 @@ def opening_paren_loc(str, start_index):
 
 def closing_paren_loc(str, first_paren):
     paren_count = -1
-    index = first_paren
-    
+    index = first_paren   
     while index < len(str):
         char = str[index]
         if char == ')' and paren_count == 0:
-            return index
-        
+            return index      
         elif char == '(':
             paren_count+=1        
         elif char == ')':

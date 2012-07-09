@@ -2,7 +2,7 @@
 import asp.jit.asp_module as asp_module
 import avroInter.avro_backend as avro_backend    
 import asp.codegen.ast_tools as ast_tools
-import asp.codegen.codegenScala as codegenScala
+from asp.codegen.codegenScala import *
 import ast
 
 import random
@@ -29,15 +29,15 @@ class BLB:
         self.pure_python= pure_python
         self.use_scala = use_scala
 
-        if not use_scala:
-            self.estimate_src = inspect.getsource(self.compute_estimate)
-            self.estimate_ast = ast.parse(self.estimate_src.lstrip())
-    
-            self.reduce_src = inspect.getsource(self.reduce_bootstraps)
-            self.reduce_ast = ast.parse(self.reduce_src.lstrip())
-    
-            self.average_src = inspect.getsource(self.average)
-            self.average_ast = ast.parse(self.average_src.lstrip())
+        
+        self.estimate_src = inspect.getsource(self.compute_estimate)
+        self.estimate_ast = ast.parse(self.estimate_src.lstrip())
+
+        self.reduce_src = inspect.getsource(self.reduce_bootstraps)
+        self.reduce_ast = ast.parse(self.reduce_src.lstrip())
+
+        self.average_src = inspect.getsource(self.average)
+        self.average_ast = ast.parse(self.average_src.lstrip())
 
         self.num_subsamples = num_subsamples
         self.num_bootstraps = num_bootstraps
@@ -69,30 +69,37 @@ class BLB:
         elif self.use_scala: 
             #mod = asp_module.ASPModule(cache_dir="/home/vagrant/spark/examples/target/scala-2.9.1.final/classes/", use_scala=True)      
             mod = asp_module.ASPModule(cache_dir = "/root/spark/examples/target/scala-2.9.1.final/classes/", use_scala=True)
-            f = open('blb_funcs.py')
-            rendered_py = f.read()     
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-            funcs_ast_py = ast.parse(rendered_py)          
-            funcs_ast_scala = ast_tools.ConvertPyAST_ScalaAST().visit(funcs_ast_py)    
-            rendered_scala = codegenScala.to_source(funcs_ast_scala)     
-            
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+            scala_estimate= ast_tools.ConvertPyAST_ScalaAST().visit(self.estimate_ast) 
+            scala_reduce = ast_tools.ConvertPyAST_ScalaAST().visit(self.reduce_ast)
+            scala_average =  ast_tools.ConvertPyAST_ScalaAST().visit(self.average_ast)
+
+            TYPE_DECS = ('TYPE_DECS', \
+                 ['compute_estimate', [('array', ('array', 'string')), ('array', ('array', 'double'))], 'double'],             
+                 ['reduce_bootstraps', [('array', 'double')], 'double'],
+                 ['average', [('array', 'double')], 'double'])
+                      
+            scala_gen = SourceGenerator(TYPE_DECS)    
+            rendered_scala = scala_gen.to_source(scala_estimate)+'\n' + scala_gen.to_source(scala_reduce) \
+                                +'\n'+ scala_gen.to_source(scala_average)
+                    
             rendered_scala = combine(rendered_scala)
             rendered = avro_backend.generate_scala_object("run","",rendered_scala)             
             #NOTE: must append outer to function name above to get the classname 
             # because of how scala_object created by avro_backend           
             mod.add_function("run_outer", rendered, backend = "scala")   
 
-            print 
-            print 'FULLY RENDERED SCALA WITH MAIN IS:', rendered
+            print 'FULLY RENDERED SCALA CODE:', rendered
             print '-------------------------------------------------------------'
-            
-            return mod.run_outer(self.num_subsamples, self.num_bootstraps, self.subsample_len_exp)            
+            email_filename = data[0]
+            model_filename = data[1]
+            return mod.run_outer(email_filename, model_filename, self.dim, self.num_subsamples, self.num_bootstraps, self.subsample_len_exp)            
         else:
             f = self.fingerprint(data)
             mod = None
             if f in self.cached_mods:
                 mod = self.cached_mods[f]
-            else:
+            else:   
                 mod = self.build_mod(f)
                 self.cached_mods[f] = mod
             return mod.compute_blb(data)

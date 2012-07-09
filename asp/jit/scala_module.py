@@ -23,20 +23,27 @@ class ScalaFunction:
     
     def __call__(self, *args, **kwargs):        
         write_avro_file(args, 'args.avro')  
-        #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
-        
+        #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'  
         prefix = os.environ['CLASSPATH']
+        
+        #doesnt work on local
         class_path = prefix +':'+self.source_dir + ':/root/sejits/asp/avroInter'
-
         os.system('~/sejits/asp/asp/jit/make_jar '+ self.source_dir)
+        
+        """
+        #local version
+        class_path = prefix +':'+self.source_dir + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'        
+        os.system('/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/asp/jit/make_jar '+ self.source_dir)
+        """    
         os.environ['FILE_LOC'] = self.source_dir + "/source.jar"
         
-        p1 = subprocess.Popen(['/root/spark/run', '-cp', class_path, self.classname], stdin=None, stdout=subprocess.PIPE)        
-        p1.wait()
-        if p1.returncode != 0:
+        print 'CLASSPATH IS:', class_path
+        print 'SELF CLASSNAME IS:', self.classname
+        out = os.system('~/spark/run -cp ' + class_path + ' ' + self.classname)
+        if out != 0:
             raise Exception("Bad return code")
             
-        results = read_avro_file('results.avro')
+        results = read_avro_file('results.avro')[0]
         #print 'RESULTS:', results
         os.remove('args.avro')
         os.remove('results.avro')

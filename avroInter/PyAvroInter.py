@@ -1,40 +1,17 @@
-
 import sys
-
-#must add these files to python classpath
 from avro import schema, datafile, io
 from cStringIO import StringIO
 
-"""
-PYTHON            JSON        AVRO
-dict             object        record
-list,tuple       array        array
-str,unicode      string        string
-int,long,float   number        float,double?
-True             true            boolean
-False            false            boolean
-None             null            null
-
-JSON    AVRO
-null    null
-boolean    boolean
-integer    int,long
-number    float,double
-string    string
-object    record
-string    enum
-array    array
-object    map
-"""   
 
 """
+Module to read from and write to .avro files
+
 TO NOTE:
 1) lists can only be of one type
 2) tuples are converted to lists
 """
 
 stored = []
-to_write = []
 
 def getAvroType(pyObject):
     t = type(pyObject)
@@ -117,10 +94,7 @@ def write_avro_file(args, outsource='args.avro'):
 #this function reads the specified avro file and stores the data in the global list stored
 def read_avro_file(insource='results.avro'):
     rec_reader = io.DatumReader()
-    if insource == sys.stdin:      
-        #DataFileReader cannot read from streams like sys.stdin because it calls
-        #seek so a temp file is necessary
-        
+    if insource == sys.stdin:          
         input = sys.stdin.read()
         temp_file = StringIO(input)
 
@@ -135,7 +109,7 @@ def read_avro_file(insource='results.avro'):
             arg = record["arg%s"%(i)]
             #print arg
             stored.append(arg)
-    return stored[0]
+    return stored
 
 def return_stored(index):
     if stored:
@@ -150,11 +124,6 @@ def return_stored():
     else:
         read_avro_file()
         return stored
-
-def set_args_to_write(args):
-    del to_write[:]
-    for a in args:
-        to_write.append(a)
         
 def tupleToList(input):
     output = list(input)
@@ -166,10 +135,14 @@ def tupleToList(input):
 
 if __name__ == '__main__': 
     args = sys.argv   
-    inputs = [[1.0*i for i in xrange(10000000)]]
+    #inputs = [[1.0*i for i in xrange(10000000)]]
+    inputs = [1,2,[3,34]]
     import time
     print "about to write"
     start = time.time()
     write_avro_file(inputs)
     end = time.time()
     print "done writing"
+    res = read_avro_file('args.avro')
+    print 'FROM FILE:' + str(res)
+    
