@@ -6,12 +6,13 @@ import javro.scala_arr
 import line_count._
 
 var DIM = 1
+var features_num = 0
 
-def bootstrap(data: Array[Array[String]]): Array[Array[String]] = {
-	var bootstrap_vectors = new Array[Array[Array[String]]](data.length/this.DIM)
+def bootstrap(data: Array[Array[Int]]): Array[Array[Int]] = {
+	var bootstrap_vectors = new Array[Array[Array[Int]]](data.length/this.DIM)
 
 	for (i <- Range(0, data.length/this.DIM)){
-		var store_arr = new Array[Array[String]](data.length)
+		var store_arr = new Array[Array[Int]](data.length)
 		var count = 0
 		for (j <- Range(i*this.DIM, (i+1)*this.DIM)){
 			store_arr(count)=data(j)
@@ -19,7 +20,7 @@ def bootstrap(data: Array[Array[String]]): Array[Array[String]] = {
 		}			
 		bootstrap_vectors(i) = store_arr
 	}
-	var bootstrap = new Array[Array[String]](data.length)
+	var bootstrap = new Array[Array[Int]](data.length)
 	var len = bootstrap_vectors.length
 	var gen = new java.util.Random()
 	
@@ -32,7 +33,7 @@ def bootstrap(data: Array[Array[String]]): Array[Array[String]] = {
 	return bootstrap
 }
 
-def subsample(data: Array[Array[String]], subsample_len_exp:Double): Array[Array[String]] = {
+def subsample(data: Array[Int], subsample_len_exp:Double): Array[Int] = {
 	
 	var subsample_len = math.pow(data.size, subsample_len_exp).asInstanceOf[Int]
 	                                                                        
@@ -43,7 +44,7 @@ def subsample(data: Array[Array[String]], subsample_len_exp:Double): Array[Array
 		subsample_indicies(i) = gen.nextInt(len/ this.DIM)
 	}
 
-	var subsample = new Array[Array[String]](subsample_len*this.DIM)
+	var subsample = new Array[Int](subsample_len*this.DIM)
 	var count = 0
 	for (s <- Range(0, subsample_indicies.length)){
 		var index = subsample_indicies(s)
@@ -55,22 +56,42 @@ def subsample(data: Array[Array[String]], subsample_len_exp:Double): Array[Array
 	return subsample
 }
 
-def readEmails(filename: String): Array[Array[String]]={
+def unflatten_vec(vector: Array[String], length:Int):Array[Int]={
+	var full_vec = new Array[Int](length)
+	var num = 0
+	var weight = 0
+	var first = true
+	for (elem <- vector){
+		if (first){full_vec(1) = Integer.parseInt(elem)} /// error happening here
+		else{
+			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
+			weight = Integer.parseInt(elem.substring(elem.indexOf(':')+1, elem.length))
+			full_vec(num-1) = weight
+		}
+	}
+	return full_vec
+}
+
+def readEmails(filename:String, selector: Array[Int]): Array[Array[Int]]={
 	import io._
-	println("filename is:" + filename)
 	var email_iter = Source.fromFile(filename).getLines()
-	
-	var emails = new Array[Array[String]](line_count.count(filename))
-	var index = 0
-    for (email <- email_iter){
-    	var email_str_ar = email.split(" ")
-    	emails(index) = email_str_ar
-    	index +=1
-    }
+	var emails = new Array[Array[Int]](selector.length)
+	var line_count = 0
+	var selector_count = 0
+	var current = selector(0)
+	for (email <- email_iter){
+		if (line_count == current){
+			emails(selector_count) = unflatten_vec(email.split(" "), this.features_num+1)
+			selector_count +=1
+			if (selector_count < selector.length){
+				current = selector(selector_count)
+			}
+		}
+		line_count +=1 
+	}
 	return emails
 }
 
-//will there be more than one vector in the model ever ?
 def parseModel(filename: String): Array[Array[Double]]={
 	import io._
 	var model_iter = Source.fromFile(filename).getLines()
@@ -78,13 +99,13 @@ def parseModel(filename: String): Array[Array[Double]]={
 	var count = 1
     var concat_model = Array[String]()
     var classes_num = 0
-    var features_num = 0
+    //var features_num = 0
 	for (line <- model_iter){
 		if (count == 2){
 			classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
 		}
 		if (count == 3){
-			features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
+			this.features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
 		}
 		if (count == lines_num){
 			concat_model = line.split(' ')
@@ -97,7 +118,7 @@ def parseModel(filename: String): Array[Array[Double]]={
 	var dim = 0
 	var weight = 0.0
 	for (i <- Range(0,classes_num)){
-		var class_vec = new Array[Double](features_num)
+		var class_vec = new Array[Double](this.features_num)
 		models(i) = class_vec
 	}
 
@@ -106,73 +127,59 @@ def parseModel(filename: String): Array[Array[Double]]={
 		if (count != 0 && count != 1 && elem != "#"){
 			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
 			weight = java.lang.Double.parseDouble(elem.substring(elem.indexOf(':')+1, elem.length))
-			class_ = (num-1)/features_num 
-			dim = (num-1) % features_num
+			class_ = (num-1)/this.features_num 
+			dim = (num-1) % this.features_num
 			models(class_ )(dim) = weight	
 		}
 		count +=1
 	}
-	/**
-	println("concat")
-	for (x <-concat_model){
-		println(x)
-	}
-	println("adsfsadf")
-	for (m<-models){
-		println("model------------------------")
-		for (x <- m){
-			println(x)
-		}
-	}
-	throw new Exception("caught")
-	**/
     return models
 }
 
-def dot(vector1: Array[Double], vector2: Array[String]):Double={
-	var total = 0.0
-	var count = 1
-	var email_elem = vector2(count)
-	var count2 = 0
-	var weight = 0.0
-	var dim = 0
-	for (elem <- vector1){
-		dim = Integer.parseInt(email_elem.substring(0, email_elem.indexOf(':')))-1
-		if (dim == count2){
-			weight = java.lang.Double.parseDouble(email_elem.substring(email_elem.indexOf(':')+1, email_elem.length))
-			total += elem*weight
-			count +=1
-			if (count != vector2.length){
-				email_elem = vector2(count)
-			}
-		}		
-		count2 +=1 
-	}	      
-	return total
+def dot(vector1:Array[Double], vector2:Array[Int]):Double={
+		var total =0.0
+		for (i <- Range(0, vector1.length)){
+			total += vector1(i) * vector2(i)
+		}
+		return total
 }
 
 
 def run(email_filename: String, model_filename:String, DIM: Int, 
 			num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
 	this.DIM = DIM
+	
 	var sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
-	//var sc = new SparkContext("local", "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
 
 	//var data = (new JAvroInter("out.avro", "data.avro")).returnStored[scala_arr[Double]](0)
 	//val broadcastData = sc.broadcast(data.stored)	
+
 	val bnum_bootstraps = sc.broadcast(num_bootstraps)
 	val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
+	
+	//val emails = sc.broadcast(readEmails(email_filename))
+	//val model = sc.broadcast(parseModel(model_filename))
 
-	val emails = sc.broadcast(readEmails(email_filename))
-	val model = sc.broadcast(parseModel(model_filename))
-
+	
 	var run_func = (x:Double)=>{		
-		var funcs = new run_outer_data()		
-		var subsamp = funcs.subsample(emails.value, bsubsample_len_exp.value)
+		var funcs = new run_outer_data()	
+		//var emails = funcs.readEmails("/root/enron/test.dat")
+		var models = funcs.parseModel("/root/enron/model")
+
+		var num_emails = line_count.count("/root/enron/test.dat")
+		var subsamp_arr = new Array[Int](num_emails)
+		for (i <- Range(0,num_emails)){
+			subsamp_arr(i) = i
+		}
+		var subsamp = funcs.subsample(subsamp_arr, bsubsample_len_exp.value)
+		//var subsamp = funcs.subsample(emails, bsubsample_len_exp.value)
+		
+		var email_subsamp = funcs.readEmails("/root/enron/test.dat", subsamp)
+
 		var bootstrap_estimates = new Array[Double](bnum_bootstraps.value)
 		for (j <- Range(0, bnum_bootstraps.value)){
-			var btstrap = funcs.bootstrap(subsamp)	
-			bootstrap_estimates(j) = funcs.compute_estimate(btstrap, model.value)
+			var btstrap = funcs.bootstrap(email_subsamp)	
+			bootstrap_estimates(j) = funcs.compute_estimate(btstrap, models)
 		}
 		funcs.reduce_bootstraps(bootstrap_estimates)
 	}
@@ -220,22 +227,6 @@ run() should be called with perhaps email and model filenames?
 				they are passed into compute_estimate
 **/
 
-
-
-
-/**
-
--6.8862271
-2* -7.1428566
--7.1428566
--7.1428566
-2*10.479042
-
-
-
--26.0581674
-
-**/
 
 
 

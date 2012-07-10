@@ -4,5 +4,6 @@
 
 
 cd $1
+cp /root/sejits/asp/avroInter/line_count.class $1
 jar -cf source.jar *.class
 

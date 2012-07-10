@@ -39,7 +39,7 @@ cd ..
 wget http://jackson.codehaus.org/1.9.6/jackson-all-1.9.6.jar
 unzip jackson-all-1.9.6.jar
 
-echo "export CLASSPATH=\$CLASSPATH:~/avro:/root/spark/core/target/spark-core-assembly-0.4-SNAPSHOT.jar" >> ~/.bash_profile
+echo "export CLASSPATH=\$CLASSPATH:.:~/avro:/root/spark/core/target/spark-core-assembly-0.4-SNAPSHOT.jar" >> ~/.bash_profile
 echo "export MASTER=master@$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):5050" >> ~/.bash_profile
 source ~/.bash_profile
 

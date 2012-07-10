@@ -75,7 +75,7 @@ class BLB:
             scala_average =  ast_tools.ConvertPyAST_ScalaAST().visit(self.average_ast)
 
             TYPE_DECS = ('TYPE_DECS', \
-                 ['compute_estimate', [('array', ('array', 'string')), ('array', ('array', 'double'))], 'double'],             
+                 ['compute_estimate', [('array', ('array', 'int')), ('array', ('array', 'double'))], 'double'],             
                  ['reduce_bootstraps', [('array', 'double')], 'double'],
                  ['average', [('array', 'double')], 'double'])
                       

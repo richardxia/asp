@@ -15,7 +15,7 @@ class SVMVerifierBLB(BLB):
                 if total > max_match:
                     choice = i + 1
                     max_match = total    
-            if choice != str(tag):
+            if choice != tag:
                 errors += 1 
         return errors / len (emails)
 
@@ -42,8 +42,8 @@ class SVMVerifierBLBTest(unittest.TestCase):
         data = tuple([i*1.0 for i in xrange(5000)])
         test_blb = SVMVerifierBLB(25, 100, .5, use_scala=True)    
            
-        result = test_blb.run('/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/specializers/blb/data/from_drop/multiclass/example4/test.dat',\
-                               '/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/specializers/blb/data/from_drop/multiclass/example4/model')
+        result = test_blb.run('/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/specializers/blb/data/example/test.dat',\
+                               '/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/specializers/blb/data/example/model')
         print 'FINAL RESULT IS:', result  
         self.assertTrue(abs(result - len(data)/2) < len(data)/90)
 
