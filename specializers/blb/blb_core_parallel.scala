@@ -62,18 +62,24 @@ def unflatten_vec(vector: Array[String], length:Int):Array[Int]={
 	var weight = 0
 	var first = true
 	for (elem <- vector){
-		if (first){full_vec(1) = Integer.parseInt(elem)} /// error happening here
+		if (first){
+			full_vec(0) = Integer.parseInt(elem)
+			println("just set 0 to:" + full_vec(0))
+			first = false
+		} 
 		else{
 			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
 			weight = Integer.parseInt(elem.substring(elem.indexOf(':')+1, elem.length))
-			full_vec(num-1) = weight
+			full_vec(num) = weight
 		}
 	}
 	return full_vec
 }
 
 def readEmails(filename:String, selector: Array[Int]): Array[Array[Int]]={
-	import io._
+	import io.Source
+	import scala.util.Sorting
+	Sorting.quickSort(selector)
 	var email_iter = Source.fromFile(filename).getLines()
 	var emails = new Array[Array[Int]](selector.length)
 	var line_count = 0
@@ -85,12 +91,19 @@ def readEmails(filename:String, selector: Array[Int]): Array[Array[Int]]={
 			selector_count +=1
 			if (selector_count < selector.length){
 				current = selector(selector_count)
+				while (current == line_count){
+					emails(selector_count) = unflatten_vec(email.split(" "), this.features_num+1)
+					selector_count += 1
+					if (selector_count < selector.length){current = selector(selector_count)}
+					else{current= -1}
+				}
 			}
 		}
 		line_count +=1 
 	}
 	return emails
 }
+
 
 def parseModel(filename: String): Array[Array[Double]]={
 	import io._
@@ -139,7 +152,7 @@ def parseModel(filename: String): Array[Array[Double]]={
 def dot(vector1:Array[Double], vector2:Array[Int]):Double={
 		var total =0.0
 		for (i <- Range(0, vector1.length)){
-			total += vector1(i) * vector2(i)
+			total += vector1(i) * vector2(i+1)
 		}
 		return total
 }
@@ -151,30 +164,23 @@ def run(email_filename: String, model_filename:String, DIM: Int,
 	
 	var sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
 
-	//var data = (new JAvroInter("out.avro", "data.avro")).returnStored[scala_arr[Double]](0)
-	//val broadcastData = sc.broadcast(data.stored)	
-
 	val bnum_bootstraps = sc.broadcast(num_bootstraps)
 	val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
-	
-	//val emails = sc.broadcast(readEmails(email_filename))
-	//val model = sc.broadcast(parseModel(model_filename))
-
+	val b_email_file = sc.broadcast(email_filename)
+	val b_model_file = sc.broadcast(model_filename)
 	
 	var run_func = (x:Double)=>{		
 		var funcs = new run_outer_data()	
-		//var emails = funcs.readEmails("/root/enron/test.dat")
-		var models = funcs.parseModel("/root/enron/model")
+		var models = funcs.parseModel(b_model_file.value)
 
-		var num_emails = line_count.count("/root/enron/test.dat")
+		var num_emails = line_count.count(b_email_file.value)
 		var subsamp_arr = new Array[Int](num_emails)
 		for (i <- Range(0,num_emails)){
 			subsamp_arr(i) = i
 		}
-		var subsamp = funcs.subsample(subsamp_arr, bsubsample_len_exp.value)
-		//var subsamp = funcs.subsample(emails, bsubsample_len_exp.value)
-		
-		var email_subsamp = funcs.readEmails("/root/enron/test.dat", subsamp)
+
+		var subsamp = funcs.subsample(subsamp_arr, bsubsample_len_exp.value)		
+		var email_subsamp = funcs.readEmails(b_email_file.value, subsamp)
 
 		var bootstrap_estimates = new Array[Double](bnum_bootstraps.value)
 		for (j <- Range(0, bnum_bootstraps.value)){
@@ -187,56 +193,5 @@ def run(email_filename: String, model_filename:String, DIM: Int,
 	return average( sc.parallelize(new Array[Double](num_subsamples)).map(run_func).collect() ) 
 
 }
-
-
-/**
-what will have to be done to run classifier?
-change call to compute estimate? hard-code in, ehh
-
-change hard-coding everywhere previously from array doubles
-combine emails and tags perhaps, and hardcode model argument in?
-		OR, DO SOMETHING LIKE I DO WITH AVRO CALL
-		am going to have to add function type decls in...
-		could then determine type/number of compute_estimate args..EASY!
-		
-		...but how to determine where these args come from/how to call?
-				any easy way to know this?
-		could just read model from inside compute_estimate?
-
-		for blb functions, could make convertPyAst_ScalaAst instance
-			and feed in to that the function types (shouldn't be too hard)
-		
-		should create new AST Py/scala node type for function type decs
-		could call compute_estimate with the iterator instead ?
-
-where will all these emails be stored? 
-		distributed already? tough to do,
-				but probably have to to not be terribly slow...
-
-so each node will store some of this data?
-
-in run, will need to get model vector from file?
-how did they convert type of compute estimate to c? hardcode in?
-
-still need to write dot function in scala...
-
-probably would be better for readEmails just to return StringIterator
-run() should be called with perhaps email and model filenames?
-		hardcoding for this example though..
-		.. eh or could do something like whatever extra args run is called with
-				they are passed into compute_estimate
-**/
-
-
-
-
-
-
-
-
-
-
-
-
 
 

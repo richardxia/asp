@@ -40,10 +40,10 @@ class SVMVerifierBLBTest(unittest.TestCase):
 
     def test(self):
         data = tuple([i*1.0 for i in xrange(5000)])
-        test_blb = SVMVerifierBLB(25, 100, .5, use_scala=True)    
+        test_blb = SVMVerifierBLB(25, 50, .5, use_scala=True)    
            
-        result = test_blb.run('/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/specializers/blb/data/example/test.dat',\
-                               '/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/specializers/blb/data/example/model')
+        result = test_blb.run('/root/enron/test.dat',\
+                               '/root/enron/model')
         print 'FINAL RESULT IS:', result  
         self.assertTrue(abs(result - len(data)/2) < len(data)/90)
 
