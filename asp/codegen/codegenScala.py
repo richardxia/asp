@@ -58,6 +58,7 @@ float
 double
 string
 (array, type) i.e. (array, int)
+(tuple, type, type [,type..]) i.e. (tuple, int, int)
 boolean
 specific class name
 null
@@ -97,9 +98,18 @@ def getArrType(elmts, for_schema = True):
         
 
 def convert_types(input_type):
+    #print 'CONVERT TYPES CALLED WITH :'+ str(input_type)
     if len(input_type) == 2 and input_type[0] == 'array':
         #return 'org.apache.avro.generic.GenericData.Array[%s]' % (convert_types(input_type[1]))
-        return 'Array[%s]' % (convert_types(input_type[1]))
+        return 'Array[%s]' %(convert_types(input_type[1]))
+    elif len(input_type) == 2 and input_type[0] == 'list':
+        return 'List[%s]' %(convert_types(input_type[1]))
+    elif len(input_type) == 3 and input_type[0] == 'tuple':
+        str = '('
+        for x in input_type[1:]:
+            str += convert_types(x) +','
+        return str[0:-1] + ')'
+    
     elif input_type in TYPES:
         return TYPES[input_type]
     else:
@@ -168,6 +178,7 @@ class SourceGenerator(NodeVisitor):
             #convert types somewhere?
             scala_arg_types, scala_ret_type = [],[]
             for arg in func[1]:
+                print 'ARG IS-----------:' + str(arg)
                 scala_arg_types.append(convert_types(arg))
             scala_ret_type = convert_types(func[2])
             self.types[name] = [scala_arg_types, scala_ret_type]    

@@ -6,17 +6,18 @@ class SVMVerifierBLB(BLB):
     def compute_estimate(emails, models):
         errors =0.0
         for email in emails:
-            tag = email[0]
+            weight = email[0]
+            tag = email[1][0][1]
             choice = 0
             max_match = -1.0
             for i in range(len(models)):
                 model = models[i]
-                total = dot(model, email)
+                total = custom_dot(model, email)
                 if total > max_match:
                     choice = i + 1
                     max_match = total    
             if choice != tag:
-                errors += 1 
+                errors += 1 * weight 
         return errors / len (emails)
 
     def reduce_bootstraps(bootstraps):

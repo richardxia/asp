@@ -5,115 +5,35 @@ import SparkContext._
 import javro.scala_arr
 import line_count._
 
-var DIM = 1
-var features_num = 0
-
-def bootstrap(data: Array[Array[Int]]): Array[Array[Int]] = {
-	var bootstrap_vectors = new Array[Array[Array[Int]]](data.length/this.DIM)
-
-	for (i <- Range(0, data.length/this.DIM)){
-		var store_arr = new Array[Array[Int]](data.length)
-		var count = 0
-		for (j <- Range(i*this.DIM, (i+1)*this.DIM)){
-			store_arr(count)=data(j)
-			count+=1
-		}			
-		bootstrap_vectors(i) = store_arr
-	}
-	var bootstrap = new Array[Array[Int]](data.length)
-	var len = bootstrap_vectors.length
-	var gen = new java.util.Random()
-	
-	for (i <- Range(0, data.length/this.DIM)){
-		var store_arr = bootstrap_vectors(gen.nextInt(len))
-		for (j <- Range(0, this.DIM)){
-			bootstrap(i*DIM + j) = store_arr(j)
-		}
-	}
-	return bootstrap
-}
-
-def subsample(data: Array[Int], subsample_len_exp:Double): Array[Int] = {
-	
-	var subsample_len = math.pow(data.size, subsample_len_exp).asInstanceOf[Int]
-	                                                                        
-	var subsample_indicies = new Array[Int](subsample_len)
-	var gen = new java.util.Random()
-	var len = data.size
-	for (i <- Range(0, subsample_len)){
-		subsample_indicies(i) = gen.nextInt(len/ this.DIM)
-	}
-
-	var subsample = new Array[Int](subsample_len*this.DIM)
-	var count = 0
-	for (s <- Range(0, subsample_indicies.length)){
-		var index = subsample_indicies(s)
-		for (j <- Range((index*this.DIM).asInstanceOf[Int], ((index+1)*this.DIM).asInstanceOf[Int])){
-			subsample(count) = data(j)
-			count += 1
-		}
-	}
-	return subsample
-}
-
-def unflatten_vec(vector: Array[String], length:Int):Array[Int]={
-	var full_vec = new Array[Int](length)
+def formatEmail(vector: Array[String]): Array[(Int,Int)]={
+	var out_vec = new Array[(Int, Int)](vector.length)
+	var first = true
 	var num = 0
 	var weight = 0
-	var first = true
+	var count = 0
 	for (elem <- vector){
 		if (first){
-			full_vec(0) = Integer.parseInt(elem)
-			println("just set 0 to:" + full_vec(0))
+			out_vec(0) = (-1, Integer.parseInt(elem))
 			first = false
-		} 
-		else{
+		}
+		else {
 			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
 			weight = Integer.parseInt(elem.substring(elem.indexOf(':')+1, elem.length))
-			full_vec(num) = weight
+			out_vec(count) = (num, weight)
 		}
+		count +=1
 	}
-	return full_vec
+	return out_vec
 }
 
-def readEmails(filename:String, selector: Array[Int]): Array[Array[Int]]={
-	import io.Source
-	import scala.util.Sorting
-	Sorting.quickSort(selector)
-	var email_iter = Source.fromFile(filename).getLines()
-	var emails = new Array[Array[Int]](selector.length)
-	var line_count = 0
-	var selector_count = 0
-	var current = selector(0)
-	for (email <- email_iter){
-		if (line_count == current){
-			emails(selector_count) = unflatten_vec(email.split(" "), this.features_num+1)
-			selector_count +=1
-			if (selector_count < selector.length){
-				current = selector(selector_count)
-				while (current == line_count){
-					emails(selector_count) = unflatten_vec(email.split(" "), this.features_num+1)
-					selector_count += 1
-					if (selector_count < selector.length){current = selector(selector_count)}
-					else{current= -1}
-				}
-			}
-		}
-		line_count +=1 
-	}
-	return emails
-}
-
-
-def parseModel(filename: String): Array[Array[Double]]={
+def parseModel(lines: Array[String]): Array[Array[Double]]={
 	import io._
-	var model_iter = Source.fromFile(filename).getLines()
-	var lines_num = line_count.count(filename)
+	var lines_num = lines.size
 	var count = 1
     var concat_model = Array[String]()
     var classes_num = 0
-    //var features_num = 0
-	for (line <- model_iter){
+    var features_num = 0
+	for (line <- lines){
 		if (count == 2){
 			classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
 		}
@@ -149,49 +69,93 @@ def parseModel(filename: String): Array[Array[Double]]={
     return models
 }
 
-def dot(vector1:Array[Double], vector2:Array[Int]):Double={
+def custom_dot(model:Array[Double], email:Array[(Int,Int)]):Double={
 		var total =0.0
-		for (i <- Range(0, vector1.length)){
-			total += vector1(i) * vector2(i+1)
+		var index = 0
+		var weight = 0
+		for (pair <- email){
+			index = pair._1
+			weight = pair._2
+			total += model(index-1) * weight
 		}
 		return total
 }
 
-
 def run(email_filename: String, model_filename:String, DIM: Int, 
 			num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
-	this.DIM = DIM
 	
-	var sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
-
+	val sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
 	val bnum_bootstraps = sc.broadcast(num_bootstraps)
 	val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
-	val b_email_file = sc.broadcast(email_filename)
-	val b_model_file = sc.broadcast(model_filename)
-	
-	var run_func = (x:Double)=>{		
-		var funcs = new run_outer_data()	
-		var models = funcs.parseModel(b_model_file.value)
+	val bnum_subsamples = sc.broadcast(num_subsamples)
 
-		var num_emails = line_count.count(b_email_file.value)
-		var subsamp_arr = new Array[Int](num_emails)
-		for (i <- Range(0,num_emails)){
-			subsamp_arr(i) = i
-		}
+    var distEmails = sc.sequenceFile[Int, String](email_filename)
+    //var distEmails = sc.sequenceFile[Int, String]("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeEmail/")
+    
+    val num_emails = distEmails.count()
+    val bnum_emails = sc.broadcast(num_emails)
+    val rand_prob = sc.broadcast(math.pow(num_emails, subsample_len_exp)/num_emails)
 
-		var subsamp = funcs.subsample(subsamp_arr, bsubsample_len_exp.value)		
-		var email_subsamp = funcs.readEmails(b_email_file.value, subsamp)
+    val modelFile = sc.textFile(model_filename)
+    //val modelFile = sc.textFile("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/")
+    val models = sc.broadcast(parseModel(modelFile.collect()))
 
-		var bootstrap_estimates = new Array[Double](bnum_bootstraps.value)
-		for (j <- Range(0, bnum_bootstraps.value)){
-			var btstrap = funcs.bootstrap(email_subsamp)	
-			bootstrap_estimates(j) = funcs.compute_estimate(btstrap, models)
-		}
-		funcs.reduce_bootstraps(bootstrap_estimates)
-	}
 
-	return average( sc.parallelize(new Array[Double](num_subsamples)).map(run_func).collect() ) 
+    var subsamps = distEmails.flatMap(email =>{
+    	val gen = new java.util.Random()
+    	var subsamp_count = 0
+    	var outputs = List[(Int, Array[(Int,Int)]()
+    	var prob =0.0
+    	val funcs = new run_outer_data()
 
+    	for (i <- Range(0, bnum_subsamples.value)){
+    		prob = gen.nextDouble()
+    		if (prob < rand_prob.value){
+    			outputs ::= (subsamp_count, funcs.formatEmail(email._2.split(" ")))
+    		}
+    		subsamp_count += 1
+    	}
+    	outputs  	
+    }).groupByKey()
+
+    // --> (Subsamp Id, subsample) --> (Int, Seq[Array[(Int, Int)]])
+
+    //assuming DIM=1 in map
+
+    var subsamps_out = subsamps.flatMap(subsamp => {
+    				//List (subsamp id, subsample) --> (subsample#, Seq(emails))
+    	val outputs = List[(Int, List[Array[(Int,Int)]])]()
+    	for (i <- Range(0, bnum_boostraps)){
+    		outputs ::= subsamp
+    	}
+    	outputs
+    }).map(subsamp => {
+    	val funcs = new run_outer_data()
+    	val subsamp_id = subsamp._1
+    	val subsamp_vec = subsamp._2
+
+				// (subsamp id, subsamp[(email count in resamp, email)])
+    	
+    	var weighted_subsamp_vec = List[(Int, Array[(Int, Int)])]()              
+
+    	for (email <- subsamp_vec){
+    		weighted_subsamp_vec ::= (0, email)    		
+    	}
+
+    	val gen = new java.util.Random()
+    	var email =""
+    	var estimate = 0.0
+    	var len = subsamp_vec.size
+
+    	for (i <- Range(0, bnum_emails.value)){
+    		weighted_subsamp_vec(gen.nextInt(len))._1 += 1
+    	}
+    	
+    	(key, funcs.compute_estimate(weighted_subsamp_vec, models.value))
+    }).groupByKey().map(bootstrap_estimates =>{
+    	val funcs new run_outer_data()
+    	funcs.reduce_bootstraps(bootstrap_estimates)
+    }).collect()
+    
+    return average(subsamp_outs)
 }
-
-
