@@ -2,12 +2,15 @@ import unittest
 
 from blb import BLB
 
+"""
+should create an "email" class in python as well
+"""
 class SVMVerifierBLB(BLB):
     def compute_estimate(emails, models):
         errors =0.0
         for email in emails:
-            weight = email[0]
-            tag = email[1][0][1]
+            weight = email.get_weight()
+            tag = email.get_tag()
             choice = 0
             max_match = -1.0
             for i in range(len(models)):
@@ -43,8 +46,8 @@ class SVMVerifierBLBTest(unittest.TestCase):
         data = tuple([i*1.0 for i in xrange(5000)])
         test_blb = SVMVerifierBLB(25, 50, .5, use_scala=True)    
            
-        result = test_blb.run('/root/enron/test.dat',\
-                               '/root/enron/model')
+        result = test_blb.run('s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeEmail/',\
+                               's3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/')
         print 'FINAL RESULT IS:', result  
         self.assertTrue(abs(result - len(data)/2) < len(data)/90)
 

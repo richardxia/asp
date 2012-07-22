@@ -5,25 +5,30 @@ import SparkContext._
 import javro.scala_arr
 import line_count._
 
-def formatEmail(vector: Array[String]): Array[(Int,Int)]={
-	var out_vec = new Array[(Int, Int)](vector.length)
+def formatEmail(vector: Array[String]): Email={
+
+	var em = new Email()
+	em.vec_indices = new Array[Int](vector.length-1)
+	em.vec_weights = new Array[Int](vector.length-1)
+
 	var first = true
 	var num = 0
 	var weight = 0
 	var count = 0
 	for (elem <- vector){
 		if (first){
-			out_vec(0) = (-1, Integer.parseInt(elem))
+			em.tag = Integer.parseInt(elem)
 			first = false
 		}
 		else {
 			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
 			weight = Integer.parseInt(elem.substring(elem.indexOf(':')+1, elem.length))
-			out_vec(count) = (num, weight)
+			em.vec_indices(count) = num
+			em.vec_weights(count) = weight
+			count += 1
 		}
-		count +=1
 	}
-	return out_vec
+	return em
 }
 
 def parseModel(lines: Array[String]): Array[Array[Double]]={
@@ -38,7 +43,7 @@ def parseModel(lines: Array[String]): Array[Array[Double]]={
 			classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
 		}
 		if (count == 3){
-			this.features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
+			features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
 		}
 		if (count == lines_num){
 			concat_model = line.split(' ')
@@ -51,7 +56,7 @@ def parseModel(lines: Array[String]): Array[Array[Double]]={
 	var dim = 0
 	var weight = 0.0
 	for (i <- Range(0,classes_num)){
-		var class_vec = new Array[Double](this.features_num)
+		var class_vec = new Array[Double](features_num)
 		models(i) = class_vec
 	}
 
@@ -60,8 +65,8 @@ def parseModel(lines: Array[String]): Array[Array[Double]]={
 		if (count != 0 && count != 1 && elem != "#"){
 			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
 			weight = java.lang.Double.parseDouble(elem.substring(elem.indexOf(':')+1, elem.length))
-			class_ = (num-1)/this.features_num 
-			dim = (num-1) % this.features_num
+			class_ = (num-1)/features_num 
+			dim = (num-1) % features_num
 			models(class_ )(dim) = weight	
 		}
 		count +=1
@@ -69,13 +74,15 @@ def parseModel(lines: Array[String]): Array[Array[Double]]={
     return models
 }
 
-def custom_dot(model:Array[Double], email:Array[(Int,Int)]):Double={
+def custom_dot(model:Array[Double], email:Email):Double={
+		var email_indices = email.get_vec_indices()
+		var email_weights = email.get_vec_weights()
 		var total =0.0
 		var index = 0
 		var weight = 0
-		for (pair <- email){
-			index = pair._1
-			weight = pair._2
+		for (i <- Range(0, email_indices.length)){
+			index = email_indices(i)
+			weight = email_weights(i)
 			total += model(index-1) * weight
 		}
 		return total
@@ -92,7 +99,7 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     var distEmails = sc.sequenceFile[Int, String](email_filename)
     //var distEmails = sc.sequenceFile[Int, String]("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeEmail/")
     
-    val num_emails = distEmails.count()
+    val num_emails = distEmails.count().asInstanceOf[Int]
     val bnum_emails = sc.broadcast(num_emails)
     val rand_prob = sc.broadcast(math.pow(num_emails, subsample_len_exp)/num_emails)
 
@@ -104,7 +111,7 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     var subsamps = distEmails.flatMap(email =>{
     	val gen = new java.util.Random()
     	var subsamp_count = 0
-    	var outputs = List[(Int, Array[(Int,Int)]()
+    	var outputs = List[(Int, Email)]()
     	var prob =0.0
     	val funcs = new run_outer_data()
 
@@ -118,44 +125,51 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     	outputs  	
     }).groupByKey()
 
-    // --> (Subsamp Id, subsample) --> (Int, Seq[Array[(Int, Int)]])
+    // --> (Subsamp Id, subsample) --> (Int, Seq[Email])
 
     //assuming DIM=1 in map
 
     var subsamps_out = subsamps.flatMap(subsamp => {
     				//List (subsamp id, subsample) --> (subsample#, Seq(emails))
-    	val outputs = List[(Int, List[Array[(Int,Int)]])]()
-    	for (i <- Range(0, bnum_boostraps)){
+    	var outputs = List[(Int, Seq[Email])]()
+    	for (i <- Range(0, bnum_bootstraps.value)){
     		outputs ::= subsamp
     	}
     	outputs
     }).map(subsamp => {
     	val funcs = new run_outer_data()
     	val subsamp_id = subsamp._1
-    	val subsamp_vec = subsamp._2
-
-				// (subsamp id, subsamp[(email count in resamp, email)])
-    	
-    	var weighted_subsamp_vec = List[(Int, Array[(Int, Int)])]()              
-
-    	for (email <- subsamp_vec){
-    		weighted_subsamp_vec ::= (0, email)    		
-    	}
-
+    	var subsamp_vec = subsamp._2
+  
     	val gen = new java.util.Random()
     	var email =""
     	var estimate = 0.0
     	var len = subsamp_vec.size
 
+    	var subsamp_weights = new Array[Int](subsamp_vec.size)
+
     	for (i <- Range(0, bnum_emails.value)){
-    		weighted_subsamp_vec(gen.nextInt(len))._1 += 1
+    		//subsamp_weights(gen.nextInt(len)) += 1
+    		subsamp_vec(gen.nextInt(len)).weight += 1
     	}
-    	
-    	(key, funcs.compute_estimate(weighted_subsamp_vec, models.value))
+
+    	/**
+    	var count = 0
+    					// (subsamp id, subsamp[(email count in resamp, email)])
+    	var weighted_subsamp_vec = List[(Int, Array[(Int, Int)])]()              
+    	for (email <- subsamp_vec){
+    		weighted_subsamp_vec ::= (subsamp_weights(count), email)  
+    		count += 1 
+    	}
+    	**/
+    	(subsamp_id, funcs.compute_estimate(subsamp_vec.asInstanceOf[List[Email]], models.value))
+
     }).groupByKey().map(bootstrap_estimates =>{
-    	val funcs new run_outer_data()
-    	funcs.reduce_bootstraps(bootstrap_estimates)
+    	val funcs = new run_outer_data()
+    	funcs.reduce_bootstraps(bootstrap_estimates._2.asInstanceOf[List[Double]])
     }).collect()
     
-    return average(subsamp_outs)
+    return average(subsamps_out)
 }
+
+

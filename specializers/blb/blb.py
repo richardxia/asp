@@ -74,8 +74,8 @@ class BLB:
             scala_reduce = ast_tools.ConvertPyAST_ScalaAST().visit(self.reduce_ast)
             scala_average =  ast_tools.ConvertPyAST_ScalaAST().visit(self.average_ast)
 
-            TYPE_DECS = (['compute_estimate', [('list', ('tuple', 'int', ('array', ('tuple','int', 'int')))), ('array', ('array', 'double'))], 'double'],             
-                 ['reduce_bootstraps', [('array', 'double')], 'double'],
+            TYPE_DECS = (['compute_estimate', [('list', 'Email'), ('array', ('array', 'double'))], 'double'],             
+                 ['reduce_bootstraps', [('list', 'double')], 'double'],
                  ['average', [('array', 'double')], 'double'])
                       
             scala_gen = SourceGenerator(TYPE_DECS)    
