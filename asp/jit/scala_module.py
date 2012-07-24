@@ -41,7 +41,7 @@ class ScalaFunction:
         print 'CLASSPATH IS:', class_path
         print 'SELF CLASSNAME IS:', self.classname
         #out = os.system('~/spark/run -cp ' + class_path + ' ' + self.classname)
-        out = Popen('/root/spark/run -cp '+class_path + ' ' +self.classname, shell=True)
+        out = subprocess.Popen('/root/spark/run -cp '+class_path + ' ' +self.classname, shell=True)
         print 'about to wait'
         out.wait()
         print 'done waiting'
