@@ -5,6 +5,6 @@
 
 cd $1
 cp /root/sejits/asp/avroInter/line_count.class $1
-cp /root/sejits/asp/specializers/blb/email.class $1
+cp /root/sejits/asp/specializers/blb/Email.class $1
 jar -cf source.jar *.class
 

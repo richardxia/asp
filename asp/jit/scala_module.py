@@ -20,34 +20,41 @@ class ScalaFunction:
             char = str[index]
         return index
  
-    
-    def __call__(self, *args, **kwargs):        
-        write_avro_file(args, 'args.avro')  
-        #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'  
+
+    def __call__(self, *args, **kwargs):
+        write_avro_file(args, 'args.avro')
+        #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
         prefix = os.environ['CLASSPATH']
-        
+
         #doesnt work on local
         class_path = prefix +':'+self.source_dir + ':/root/sejits/asp/avroInter'
         os.system('~/sejits/asp/asp/jit/make_jar '+ self.source_dir)
-        
+        #p = Popen('/root/sejits/asp/asp/jit/make_jar'+self.source_dir, shell=True)
+        #p.wait()
         """
         #local version
-        class_path = prefix +':'+self.source_dir + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'        
+        class_path = prefix +':'+self.source_dir + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'
         os.system('/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/asp/jit/make_jar '+ self.source_dir)
-        """    
+        """
         os.environ['FILE_LOC'] = self.source_dir + "/source.jar"
-        
+
         print 'CLASSPATH IS:', class_path
         print 'SELF CLASSNAME IS:', self.classname
-        out = os.system('~/spark/run -cp ' + class_path + ' ' + self.classname)
-        if out != 0:
+        #out = os.system('~/spark/run -cp ' + class_path + ' ' + self.classname)
+        out = Popen('/root/spark/run -cp '+class_path + ' ' +self.classname, shell=True)
+        print 'about to wait'
+        out.wait()
+        print 'done waiting'
+        if out.returncode != 0:
+            print "return code is:" , out.returncode
             raise Exception("Bad return code")
-            
+
         results = read_avro_file('results.avro')[0]
         #print 'RESULTS:', results
         os.remove('args.avro')
         os.remove('results.avro')
         return results
+
 
 
 class PseudoModule:

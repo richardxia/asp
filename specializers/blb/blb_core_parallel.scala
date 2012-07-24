@@ -149,27 +149,24 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     	var subsamp_weights = new Array[Int](subsamp_vec.size)
 
     	for (i <- Range(0, bnum_emails.value)){
-    		//subsamp_weights(gen.nextInt(len)) += 1
-    		subsamp_vec(gen.nextInt(len)).weight += 1
+    		subsamp_weights(gen.nextInt(len)) += 1
+    		//subsamp_vec(gen.nextInt(len)).weight += 1
+    	}
+    	
+    	for (i <- Range(0, subsamp_weights.length)){
+    		subsamp_vec(i).weight = subsamp_weights(i)
     	}
 
-    	/**
-    	var count = 0
-    					// (subsamp id, subsamp[(email count in resamp, email)])
-    	var weighted_subsamp_vec = List[(Int, Array[(Int, Int)])]()              
-    	for (email <- subsamp_vec){
-    		weighted_subsamp_vec ::= (subsamp_weights(count), email)  
-    		count += 1 
-    	}
-    	**/
-    	(subsamp_id, funcs.compute_estimate(subsamp_vec.asInstanceOf[List[Email]], models.value))
+    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, models.value))
 
     }).groupByKey().map(bootstrap_estimates =>{
     	val funcs = new run_outer_data()
-    	funcs.reduce_bootstraps(bootstrap_estimates._2.asInstanceOf[List[Double]])
+    	funcs.reduce_bootstraps(bootstrap_estimates._2.toList)
     }).collect()
     
-    return average(subsamps_out)
+    var res = average(subsamps_out)
+    System.err.println("res is:" + res)
+    return res
 }
 
 

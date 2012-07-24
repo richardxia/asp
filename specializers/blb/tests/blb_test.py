@@ -8,8 +8,10 @@ should create an "email" class in python as well
 class SVMVerifierBLB(BLB):
     def compute_estimate(emails, models):
         errors =0.0
+        num_emails = 0
         for email in emails:
             weight = email.get_weight()
+            num_emails += weight
             tag = email.get_tag()
             choice = 0
             max_match = -1.0
@@ -20,8 +22,9 @@ class SVMVerifierBLB(BLB):
                     choice = i + 1
                     max_match = total    
             if choice != tag:
-                errors += 1 * weight 
-        return errors / len (emails)
+                errors += weight 
+                
+        return errors / num_emails
 
     def reduce_bootstraps(bootstraps):
         mean = 0.0
