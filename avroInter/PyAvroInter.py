@@ -102,6 +102,7 @@ def read_avro_file(insource='results.avro'):
     else:
         df_reader = datafile.DataFileReader(open(insource), rec_reader)
     del stored[:]
+    """
     for record in df_reader:
         size = record['size']
         for i in range(size):
@@ -109,7 +110,8 @@ def read_avro_file(insource='results.avro'):
             arg = record["arg%s"%(i)]
             #print arg
             stored.append(arg)
-    return stored
+    """
+    return df_reader
 
 def return_stored(index):
     if stored:

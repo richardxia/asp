@@ -3,11 +3,10 @@ package javro;
 import java.util.List;
 
 
-//import java.util.ArrayList;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-
+import java.util.Collections;
 
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
@@ -48,11 +47,9 @@ public class JAvroInter{
 	public JAvroInter(String outputFile, String inputFile) throws IOException, IllegalAccessException,InstantiationException,ClassNotFoundException{
 		OUTPUT_FILE_NAME = outputFile;
 		INPUT_FILE_NAME = inputFile;
-		//System.exit(1);
-		this.readAvroFile();
+
 	}
 	
-	//turn into switch statement
 	public String getAvroType(Object item){
 		if (item == null){
 			return "\"null\"";
@@ -64,7 +61,6 @@ public class JAvroInter{
 				|| name == "org.apache.avro.generic.GenericData$Array"){
 		**/
 		if (item instanceof List){
-			// fix below for when arrays are empty??
 			return String.format("{ \"type\":\"array\", \"items\": %s}", getAvroType(((List)item).get(0)));
 		}		 
 		else if (name == "java.lang.Double" || name == "double"){
@@ -103,13 +99,42 @@ public class JAvroInter{
 			size += ",";
 		}
 		schema += size;
-		String type, entry;
+		String type ="";
+		String entry ="";
 		int count = 1;
 		for (Object arg: args){
 			type = this.getAvroType(arg);
 			entry = String.format("\n"
 				+"\t\t{ \"name\": \"arg%d\"	, \"type\": %s	}", count, type);
 			if (count != args.length){
+				entry += ",";
+			}
+			schema += entry;
+			count += 1;
+		}
+		String close = "\n"
+			+ "\t]\n}";
+		schema += close;
+		return schema;
+	}
+	
+	public String makeModelSchema(int length){
+		String schema = "{\n"
+			+"\t\"type\": \"record\",\n"
+			+"\t\"name\": \"args\",\n"
+			+"\t\"namespace\": \"JAVAMODULE\",\n"
+			+"\t\"fields\": [\n";		
+		String size = "\t\t{ \"name\": \"size\"	, \"type\": \"int\"	}";
+		size += ",";
+		schema += size;
+		String type, entry;
+		type ="{    \"type\":\"array\", \"items\": \"float\"    }";
+		int count = 1;
+		
+		for (int i=0; i < length; i++){
+			entry = String.format("\n"
+				+"\t\t{ \"name\": \"arg%d\"	, \"type\": %s	}", count, type);
+			if (count != length){
 				entry += ",";
 			}
 			schema += entry;
@@ -148,16 +173,81 @@ public class JAvroInter{
 		dataFileWriter.close();		
 	}	
 		
+	public void writeModel(String filename, int num_vecs) throws IOException{
+		
+		String s= this.makeModelSchema(1);		
+		Schema schema = (new Schema.Parser()).parse(s);		
+		this.schema = schema;
+		
+		
+		 BufferedReader buffer = new BufferedReader(new FileReader(filename));
+		 String line = null;
+		 int count = 1;
+		 int classes_num = 0;
+		 int features_num = 0;
+		 int num =0;
+		 float weight =new Float(0.0);
+		 String[] concat_model;
+		 while(count < 15)
+		 {
+		        line = buffer.readLine();
+		        if (count == 2){
+		                classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')));
+		        }
+		        if (count == 3){
+		                features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')));
+		        }
+		         count += 1;
+		 }
+
+		String elem = "";
+		char c;
+		int class_count =0;
+		int elem_counter = 0;
+		int i;
+		
+		GenericRecord datum = new GenericData.Record(schema);
+		datum.put("size", features_num);				
+		DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+		DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
+		File file = new File(OUTPUT_FILE_NAME);
+		dataFileWriter.create(schema,file);
+		
+		List<Float> vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
+
+		
+		while ((i=buffer.read())!= -1){
+		        c = (char)i;
+		        if (c != ' '){
+		                elem += c;
+		        }else{
+			        if (elem_counter !=0 && elem_counter != 1 && !elem.equals("#")){
+				        num = Integer.parseInt(elem.substring(0, elem.indexOf(':')));
+				        weight =  java.lang.Float.parseFloat(elem.substring(elem.indexOf(':')+1, elem.length()));
+				        vec.set((num-1)%features_num, weight);
+			             if ((num) / features_num > class_count){
+			     			datum.put("vec", vec);
+			     			dataFileWriter.append(datum);
+			     			datum = new GenericData.Record(schema);
+			     			datum.put("size", features_num);
+			     			vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
+		                     class_count += 1;
+		                  }
+			        }
+			        elem_counter += 1;
+			        elem = "";
+		        }
+			}
+							
+
+		dataFileWriter.close();	
+		
+	}
 	public void readAvroFile() throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
 		File file = new File(INPUT_FILE_NAME);
-		double start= System.nanoTime();
-		//System.exit(1);
 		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
-		double end = System.nanoTime();
-		double elapsed = end-start;
-		//System.out.println("rdinstant:"+elapsed);
+
 		GenericRecord record;
-		//System.exit(1);
 		if (INPUT_FILE_NAME == "System.in"){
 			DataFileStream dfs = new DataFileStream(System.in, reader);
 			record = (GenericRecord)dfs.next();
@@ -169,6 +259,14 @@ public class JAvroInter{
 		this.store(record);
 	}
 	
+	public DataFileReader<GenericRecord> readModel(String filename)throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
+		File file = new File(filename);
+		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
+		GenericRecord record;
+		DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(file,reader);
+	
+		return dataFileReader;
+	}
 	/**
 	 * this method takes the input data, presumably from args.avro, and stores it in the array stored
 	 */	
@@ -177,7 +275,6 @@ public class JAvroInter{
 		stored = new Object[size];
 		Object item;
 		for (int i=0; i < size; i++){
-			//convert org.apache.avro.util.Utf8 to String format
 			item = record.get(String.format("arg%d",i+1));
 			if (item instanceof org.apache.avro.util.Utf8){
 				stored[i] = item.toString();
@@ -193,18 +290,13 @@ public class JAvroInter{
 	 */
 	
 	public <T> T returnStored(int index){
-		//System.stderr.println("INSIDE RETURN STORE FOR INDEX:" + 0);
-		//return stored[index].asInstanceOf[T]; 
-		//System.err.println("IN RET STORED");
-		//System.err.println("ITEM IS:"+ stored[index]);
+
 		Object item = stored[index];
 		String name = item.getClass().getName();
 		if (name == "org.apache.avro.generic.GenericData$Array"){
-			//assumes all arrays are of type Double
-			//double[] d = new double[1];
+
 			ArrayList arr = new ArrayList((List)stored[index]);
-			// should I just create a new adapater class and return that? ehhhhh
-			//return (T)stored[index];
+
 			scala_arr d = new scala_arr(arr);
 			return (T)d;
 		}
@@ -249,129 +341,23 @@ public class JAvroInter{
 	
 	
 	public static void main(String[] args) throws IOException, IllegalAccessException, ClassNotFoundException, InstantiationException{
-		/**
-		double start = System.nanoTime();
-		JAvroInter j = new JAvroInter("results.avro", "results.avro");
-		double end = System.nanoTime();
-		double elapsed = end- start;
-		System.out.println("i-time:"+ elapsed);
-		**/
-	
 		
 		try{
-		//BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-		//String words = br.readLine();
-		//System.out.println("sys in: "+ words);
-		JAvroInter j = new JAvroInter("results.avro", "args.avro");
-		
-		j.printStored();
-		
-		Object[] arr = {8,9,10,22};
-		//j.writeAvroFile(arr);
-		System.out.println("DONE");
-		
-		Object d = j.returnStored(0);
-		//GenericData.Array arr2 = (GenericData.Array)d;
-		//Object d = j.returnStored(0);
-		
-		
-		//ArrayList<Double> p = new ArrayList<Double>();
-		//p.add(3.23);
-		System.out.println(((scala_arr)d).apply(0));
-		System.out.println(((scala_arr)d).apply(0).getClass());
-		
-		System.out.println("here's d: " + d);
-		System.out.println("its class is:" + d.getClass());
-		
-		/**
-		Double[] ar = p.toArray(new Double[1]);
 
-		System.out.println("here's d: " + ar);
-		System.out.println("its class is:" + ar.getClass());
-		
-		double[] m = new double[3];
-		System.out.println("here's d: " + m);
-		System.out.println("its class is:" + m.getClass());		                        
+		JAvroInter j = new JAvroInter("p113kmodel.avro", "args.avro");
 		/**
-		ArrayList al = new ArrayList((List)d);
+		j.writeModel("p113kmodel", 2);
+		 **/
 		
-		System.out.println("here's d: " + al);
-		System.out.println("its class is:" + al.getClass());
-		System.out.println("here's d: " + al.get(0));
-		System.out.println("here's d: " + al.get(0).getClass());
-		**/
-
-		//String s = j.returnStored(2);
-		//System.out.println(s);
-		//Object[] results = new Object[1];
-		//results[0]  = "asdfasdf";
-		//j.writeAvroFile(results);
+		DataFileReader<GenericRecord> dataFileReader = j.readModel("p113kmodel.avro");
 		
-		//need to print contents of system.out???????????
-		//BufferedReader br = new BufferedReader(new InputStreamReader(System.out));
-		//File f = new File("System.out");
-		//BufferedReader br = new BufferedReader(new FileReader(f));
-		
-		//System.out.println("here's out: " + br.read());
-		/**
-		JAvroInter w = new JAvroInter("results.avro", "System.out");
-		String q = w.returnStored(0);
-		System.out.println("returned val:" + q);
-		**/
+		GenericRecord record = dataFileReader.next();
+		System.out.println("record is:" + record);
 		}
 		catch(IOException ioe){
 			System.out.println("caught urrror: "+ ioe);
 		}
 		
 	}
-	/**
-	 *  The below commented out methods were made in an attempt to convert avro given classes,
-	 *  i.e. GenericData.Array to more conventional classes, like Object[]...but it seems far
-	 *  far easier just to stick with the avro given classes to avoid tremendous casting
-	 *  and peculiar type complications
-	 * 
-	 * 
-	 * 
-	// the input must have a subclass of GenericData.Array...intended to directly come from format()
-	// the formatting of children of generic arrays that aren't more arrays could be done more 
-	// cleanly...
-	public Object[] convertGenericArray(Object genericArray)throws InstantiationException, IllegalAccessException{
-		
-		Object child = ((org.apache.avro.generic.GenericData.Array)genericArray).get(0);
-		if (child.getClass().getName() == "org.apache.avro.generic.GenericData$Array"){
-			for (int i=0; i < ((List)genericArray).size(); i++){
-				((List)genericArray).set(i, this.convertGenericArray(((List)genericArray).get(i)));
-			}
-		}
-		//same formatting changes that are below in format method, this isn't working??
-		else if (child.getClass().getName() == "org.apache.avro.util.Utf8"){
-			for (int i=0; i < ((List)genericArray).size(); i++){
-				((List)genericArray).set(i, ((List)genericArray).get(i).toString());
-			}
-		}
-		
-		// how to figure out type 
-		//need to instead use toArray(T[] a) to cast it to array of proper type, not Object[]
-		
-		return ((List)genericArray).toArray();
-		//problem is what's going in is an object array, not an array of whatever type is necessary
-		//could manually figure out 
-		//return ((List)genericArray).toArray(this.makeArray(child.getClass().newInstance()));
-		
-		//return new Object[3];
-	
-	}	
-	
-	public <T> T[] makeArray(T item){		
-		return (T[])java.lang.reflect.Array.newInstance(item.getClass(), 0);
-	}
-	
-	public void format(int i){
-		String className = stored[i].getClass().getName();
-		if (className == "org.apache.avro.util.Utf8"){
-			stored[i] = stored[i].toString();			
-			// other formatting changes that need to be done??
-		}
-	}
-	**/		
+
 }

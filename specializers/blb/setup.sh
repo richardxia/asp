@@ -43,6 +43,14 @@ echo "export CLASSPATH=\$CLASSPATH:.:~/avro:/root/spark/core/target/spark-core-a
 echo "export MASTER=master@$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):5050" >> ~/.bash_profile
 source ~/.bash_profile
 
+mkdir ~/avro/org
+mkdir ~/avro/org/apache
+mkdir ~/avro/org/apache/hadoop
+mkdir ~/avro/org/apache/hadoop/io
+mv ~/sejits/asp/hadoop/A* ~/avro/org/apache/hadoop/io
+
+~/mesos-ec2/copy-dir ~/avro
+
 cd ~/sejits/asp/specializers/blb
 chmod +x test.sh
 

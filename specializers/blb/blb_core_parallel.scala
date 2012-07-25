@@ -4,6 +4,7 @@ import spark._
 import SparkContext._
 import javro.scala_arr
 import line_count._
+import org.apache.hadoop.io._
 
 def formatEmail(vector: Array[String]): Email={
 
@@ -88,6 +89,20 @@ def custom_dot(model:Array[Double], email:Email):Double={
 		return total
 }
 
+def custom_dot(model: GenericData.Array, email: Email): Double ={
+		var email_indices = email.get_vec_indices()
+		var email_weights = email.get_vec_weights()
+		var total =0.0
+		var index = 0
+		var weight = 0
+		for (i <- Range(0, email_indices.length)){
+			index = email_indices(i)
+			weight = email_weights(i)
+			total += model.get(index-1).asInstanceOf[Float] * weight
+		}
+		return total
+}
+
 def run(email_filename: String, model_filename:String, DIM: Int, 
 			num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
 	
@@ -103,9 +118,14 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     val bnum_emails = sc.broadcast(num_emails)
     val rand_prob = sc.broadcast(math.pow(num_emails, subsample_len_exp)/num_emails)
 
-    val modelFile = sc.textFile(model_filename)
+    //val modelFile = sc.textFile(model_filename)
     //val modelFile = sc.textFile("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/")
-    val models = sc.broadcast(parseModel(modelFile.collect()))
+    //val models = sc.broadcast(parseModel(modelFile.collect()))
+    
+    val distModels =sc.sequenceFile[Int, ArrayPrimitiveWritable](model_filename)
+    //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get()}).collect())
+    var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get().asInstanceOf[Array[Double]]}).collect())
+
 
 
     var subsamps = distEmails.flatMap(email =>{
@@ -168,5 +188,4 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     System.err.println("res is:" + res)
     return res
 }
-
 

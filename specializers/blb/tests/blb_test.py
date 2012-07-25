@@ -5,7 +5,10 @@ from blb import BLB
 """
 should create an "email" class in python as well
 """
+from avroInter.PyAvroInter import *
+
 class SVMVerifierBLB(BLB):
+    """
     def compute_estimate(emails, models):
         errors =0.0
         num_emails = 0
@@ -25,7 +28,29 @@ class SVMVerifierBLB(BLB):
                 errors += weight 
                 
         return errors / num_emails
-
+    """
+    def compute_estimate(emails, num_classes):
+        errors =0.0
+        num_emails = 0
+        model_reader = read_avro_file('p113kmodel.avro')
+        models = model_iter.next()
+        for email in emails:
+            weight = email.get_weight()
+            num_emails += weight
+            tag = email.get_tag()
+            choice = 0
+            max_match = -1.0
+            for i in range(num_classes):
+                model = models.get(i+1)
+                total = custom_dot(model, email)
+                if total > max_match:
+                    choice = i + 1
+                    max_match = total    
+            if choice != tag:
+                errors += weight 
+                
+        return errors / num_emails
+    
     def reduce_bootstraps(bootstraps):
         mean = 0.0
         for bootstrap in bootstraps:

@@ -6,5 +6,10 @@
 cd $1
 cp /root/sejits/asp/avroInter/line_count.class $1
 cp /root/sejits/asp/specializers/blb/Email.class $1
+mkdir $1/org
+mkdir $1/org/apache/
+mkdir $1/org/apache/hadoop/
+mkdir $1/org/apache/hadoop/io
+cp /root/avro/org/apache/hadoop/io/A* $1/org/apache/hadoop/io
 jar -cf source.jar *.class
 

@@ -354,6 +354,11 @@ class SourceGenerator(NodeVisitor):
         elif node.func.name == 'float':
             self.visit(node.args[0])
             self.write('.asInstanceOf[Double]')
+        elif node.func.name == 'read_avro_file':
+            self.write('(new JAvroInter(res.avro, args.avro)).readModel(')
+            self.visit(node.args[0])
+            self.write(')')
+
         else:
             self.visit(node.func)
             self.write('(')
