@@ -37,65 +37,6 @@ def formatEmail(vector: Array[String]): Email={
 	return em
 }
 
-def parseModel(lines: Array[String]): Array[Array[Double]]={
-	import io._
-	var lines_num = lines.size
-	var count = 1
-    var concat_model = Array[String]()
-    var classes_num = 0
-    var features_num = 0
-	for (line <- lines){
-		if (count == 2){
-			classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
-		}
-		if (count == 3){
-			features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')))
-		}
-		if (count == lines_num){
-			concat_model = line.split(' ')
-		}
-		count +=1 
-    }
-	var models = new Array[Array[Double]](classes_num)
-	var num = 0
-	var class_ = 0
-	var dim = 0
-	var weight = 0.0
-	for (i <- Range(0,classes_num)){
-		var class_vec = new Array[Double](features_num)
-		models(i) = class_vec
-	}
-
-	count = 0
-	for (elem <- concat_model){
-		if (count != 0 && count != 1 && elem != "#"){
-			num = Integer.parseInt(elem.substring(0, elem.indexOf(':')))
-			weight = java.lang.Double.parseDouble(elem.substring(elem.indexOf(':')+1, elem.length))
-			class_ = (num-1)/features_num 
-			dim = (num-1) % features_num
-			models(class_ )(dim) = weight	
-		}
-		count +=1
-	}
-    return models
-}
-
-/**
-def custom_dot(model:Array[Double], email:Email):Double={
-		var email_indices = email.get_vec_indices()
-		var email_weights = email.get_vec_weights()
-		var total =0.0
-		var index = 0
-		var weight = 0
-		for (i <- Range(0, email_indices.length)){
-			index = email_indices(i)
-			weight = email_weights(i)
-			total += model(index-1) * weight
-		}
-		return total
-}
-**/
-
 def custom_dot(model: GenericData.Array[Float], email: Email): Double ={
 		var email_indices = email.get_vec_indices()
 		var email_weights = email.get_vec_weights()

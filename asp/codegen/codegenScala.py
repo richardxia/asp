@@ -397,6 +397,9 @@ class SourceGenerator(NodeVisitor):
             self.write('.get(')
             self.visit(node.args[0])
             self.write(').asInstanceOf[org.apache.avro.generic.GenericData.Array[Float]]')
+        elif node.func.attr == 'next':
+            self.visit(node.func.value)
+            self.write('.next().get(1).asInstanceOf[org.apache.avro.generic.GenericData.Array[Float]]')
         else:
             self.visit(node.func)
             self.write('(')

@@ -32,8 +32,7 @@ class SVMVerifierBLB(BLB):
     def compute_estimate(emails, num_classes):
         errors =0.0
         num_emails = 0
-        model_reader = read_avro_file('p113kmodel.avro')
-        models = model_reader.next()
+        model_reader = read_avro_file('/root/models/p113kmodel.avro')
         for email in emails:
             weight = email.get_weight()
             num_emails += weight
@@ -41,7 +40,7 @@ class SVMVerifierBLB(BLB):
             choice = 0
             max_match = -1.0
             for i in range(num_classes):
-                model = models.get(i+1)
+                model = model_reader.next()
                 total = custom_dot(model, email)
                 if total > max_match:
                     choice = i + 1

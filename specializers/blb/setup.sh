@@ -43,19 +43,24 @@ echo "export CLASSPATH=\$CLASSPATH:.:~/avro:/root/spark/core/target/spark-core-a
 echo "export MASTER=master@$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):5050" >> ~/.bash_profile
 source ~/.bash_profile
 
-mkdir ~/avro/org
-mkdir ~/avro/org/apache
-mkdir ~/avro/org/apache/hadoop
-mkdir ~/avro/org/apache/hadoop/io
-mv ~/sejits/asp/hadoop/A* ~/avro/org/apache/hadoop/io
 
-cp -r ~/avro/ /root/scala-2.9.1.final 
-mv /root/scala-2.9.1.final/avro/* ..
+cd ~
+wget http://sourceforge.net/projects/s3tools/files/latest/download?source=files
+unzip s3cmd-1.1.0-beta3.zip
+cd s3cmd-1.1.0-beta3
+./s3cmd --configure
+AKIAJVLVU3XLP4GLMFEA
+xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy
+./s3cmd get s3://halfmilEmail/...
+mkdir ~/models
+mv .. ~/models
+~/mesos-ec2/copy-dir /root/models
 
-cp -r ~/sejits/asp/avroInter/ /root/scala-2.9.1.final
-mv /root/scala-2.9.1.final/avroInter/* ..
+cd ~/sejits/asp/avroInter
+javac -d ../avroInter/ JAvroInter.java
 
-~/mesos-ec2/copy-dir /root/scala-2.9.1.final/
+cp -r ~/sejits/asp/avroInter/* /root/avro
+~/mesos-ec2/copy-dir /root/avro
 
 cd ~/sejits/asp/specializers/blb
 chmod +x test.sh

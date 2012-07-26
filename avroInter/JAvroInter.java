@@ -173,76 +173,84 @@ public class JAvroInter{
 		dataFileWriter.close();		
 	}	
 		
-	public void writeModel(String filename, int num_vecs) throws IOException{
-		
-		String s= this.makeModelSchema(1);		
-		Schema schema = (new Schema.Parser()).parse(s);		
-		this.schema = schema;
-		
-		
-		 BufferedReader buffer = new BufferedReader(new FileReader(filename));
-		 String line = null;
-		 int count = 1;
-		 int classes_num = 0;
-		 int features_num = 0;
-		 int num =0;
-		 float weight =new Float(0.0);
-		 String[] concat_model;
-		 while(count < 15)
-		 {
-		        line = buffer.readLine();
-		        if (count == 2){
-		                classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')));
-		        }
-		        if (count == 3){
-		                features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')));
-		        }
-		         count += 1;
-		 }
+    public void writeModel(String filename, int num_vecs) throws IOException{
 
-		String elem = "";
-		char c;
-		int class_count =0;
-		int elem_counter = 0;
-		int i;
-		
-		GenericRecord datum = new GenericData.Record(schema);
-		datum.put("size", features_num);				
-		DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
-		DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
-		File file = new File(OUTPUT_FILE_NAME);
-		dataFileWriter.create(schema,file);
-		
-		List<Float> vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
+        String s= this.makeModelSchema(1);
+        Schema schema = (new Schema.Parser()).parse(s);
+        this.schema = schema;
 
-		
-		while ((i=buffer.read())!= -1){
-		        c = (char)i;
-		        if (c != ' '){
-		                elem += c;
-		        }else{
-			        if (elem_counter !=0 && elem_counter != 1 && !elem.equals("#")){
-				        num = Integer.parseInt(elem.substring(0, elem.indexOf(':')));
-				        weight =  java.lang.Float.parseFloat(elem.substring(elem.indexOf(':')+1, elem.length()));
-				        vec.set((num-1)%features_num, weight);
-			             if ((num) / features_num > class_count){
-			     			datum.put("vec", vec);
-			     			dataFileWriter.append(datum);
-			     			datum = new GenericData.Record(schema);
-			     			datum.put("size", features_num);
-			     			vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
-		                     class_count += 1;
-		                  }
-			        }
-			        elem_counter += 1;
-			        elem = "";
-		        }
-			}
-							
 
-		dataFileWriter.close();	
-		
-	}
+         BufferedReader buffer = new BufferedReader(new FileReader(filename));
+         String line = null;
+         int count = 1;
+         int classes_num = 0;
+         int features_num = 0;
+         int num =0;
+         float weight =new Float(0.0);
+         String[] concat_model;
+         while(count < 15)
+         {
+                line = buffer.readLine();
+                if (count == 2){
+                        classes_num = Integer.parseInt(line.substring(0, line.indexOf(' ')));
+                }
+                if (count == 3){
+                        features_num = Integer.parseInt(line.substring(0, line.indexOf(' ')));
+                }
+                 count += 1;
+         }
+
+        String elem = "";
+        char c;
+        int class_count =0;
+        int elem_counter = 0;
+        int i;
+
+        GenericRecord datum = new GenericData.Record(schema);
+        datum.put("size", features_num);
+        DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+        DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
+        File file = new File(OUTPUT_FILE_NAME);
+
+        dataFileWriter.create(schema, file);
+
+        List<Float> vec = new ArrayList<Float>(Collections.nCopies(33, new Float(0.0)));
+
+        datum = new GenericData.Record(schema);
+        datum.put("size", features_num);
+
+        vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
+        while ((i=buffer.read())!= -1){
+                c = (char)i;
+                if (c != ' '){
+                        elem += c;
+                }else{
+                        if (elem_counter !=0 && elem_counter != 1 && !elem.equals("#")){
+                                num = Integer.parseInt(elem.substring(0, elem.indexOf(':')));
+                                weight =  java.lang.Float.parseFloat(elem.substring(elem.indexOf(':')+1, elem.length()));
+                                vec.set((num-1)%features_num, weight);
+                                if ((num) / features_num > class_count){
+                                    datum.put("arg1", vec);
+                                    dataFileWriter.append(datum);
+                                    datum = new GenericData.Record(schema);
+                                    datum.put("size", features_num);
+                                    System.out.println("count is:" + class_count);
+                                    vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
+                         class_count += 1;
+                      }
+                    }
+                    elem_counter += 1;
+                    elem = "";
+            }
+            }
+
+        dataFileWriter.close();
+
+    }
+
+                                
+                               
+                                
 	public void readAvroFile() throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
 		File file = new File(INPUT_FILE_NAME);
 		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
@@ -267,6 +275,7 @@ public class JAvroInter{
 		DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(file,reader);
 
 		return dataFileReader;
+		
 	}
 	/**
 	 * this method takes the input data, presumably from args.avro, and stores it in the array stored
@@ -362,5 +371,65 @@ public class JAvroInter{
 		}
 		
 	}
+}
 
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+
+import org.apache.avro.Schema;
+import org.apache.avro.file.DataFileStream;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumReader;
+import org.apache.avro.io.DatumWriter;
+
+public class AvroDataFile {
+
+    public static void main(String[] args) throws IOException {
+        String schemaDescription = " {    \n"
+                + " \"name\": \"FacebookUser\", \n"
+                + " \"type\": \"record\",\n" + " \"fields\": [\n"
+                + "   {\"name\": \"name\", \"type\": \"string\"},\n"
+                + "   {\"name\": \"num_likes\", \"type\": \"int\"},\n"
+                + "   {\"name\": \"num_photos\", \"type\": \"int\"},\n"
+                + "   {\"name\": \"num_groups\", \"type\": \"int\"} ]\n" + "}";
+
+        Schema schema = Schema.parse(schemaDescription);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(
+                schema);
+        DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(
+                writer);
+        dataFileWriter.create(schema, os);
+
+        GenericRecord datum = new GenericData.Record(schema);
+        datum.put("name", new org.apache.avro.util.Utf8("Doctor Who"));
+        datum.put("num_likes", 1);
+        datum.put("num_groups", 423);
+        datum.put("num_photos", 0);
+
+        dataFileWriter.append(datum);
+        dataFileWriter.close();
+
+        System.out.println("encoded string: " + os.toString());
+
+        DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
+        ByteArrayInputStream is = new ByteArrayInputStream(os.toByteArray());
+        DataFileStream<GenericRecord> dataFileReader = new DataFileStream<GenericRecord>(
+                is, reader);
+
+        GenericRecord record = null;
+        while (dataFileReader.hasNext()) {
+            record = dataFileReader.next(record);
+            System.out.println(record.get("name").toString());
+            System.out.println(record.get("num_likes").toString());
+            System.out.println(record.get("num_groups").toString());
+            System.out.println(record.get("num_photos").toString());
+        }
+    }
 }
