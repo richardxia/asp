@@ -33,7 +33,7 @@ class SVMVerifierBLB(BLB):
         errors =0.0
         num_emails = 0
         model_reader = read_avro_file('p113kmodel.avro')
-        models = model_iter.next()
+        models = model_reader.next()
         for email in emails:
             weight = email.get_weight()
             num_emails += weight
@@ -74,7 +74,7 @@ class SVMVerifierBLBTest(unittest.TestCase):
         data = tuple([i*1.0 for i in xrange(5000)])
         test_blb = SVMVerifierBLB(25, 50, .5, use_scala=True)    
            
-        result = test_blb.run('s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeEmail/',\
+        result = test_blb.run('s3n://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@halfmilEmail/seq113ktest',\
                                's3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/')
         print 'FINAL RESULT IS:', result  
         self.assertTrue(abs(result - len(data)/2) < len(data)/90)

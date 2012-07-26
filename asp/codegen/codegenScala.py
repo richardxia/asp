@@ -355,7 +355,7 @@ class SourceGenerator(NodeVisitor):
             self.visit(node.args[0])
             self.write('.asInstanceOf[Double]')
         elif node.func.name == 'read_avro_file':
-            self.write('(new JAvroInter(res.avro, args.avro)).readModel(')
+            self.write('(new JAvroInter("res.avro", "args.avro")).readModel(')
             self.visit(node.args[0])
             self.write(')')
 
@@ -392,6 +392,11 @@ class SourceGenerator(NodeVisitor):
             self.write('scala_lib.rand_choice(')    
             self.visit(node.args[0])
             self.write(')')                        
+        elif node.func.attr =='get':
+            self.visit(node.func.value)
+            self.write('.get(')
+            self.visit(node.args[0])
+            self.write(').asInstanceOf[org.apache.avro.generic.GenericData.Array[Float]]')
         else:
             self.visit(node.func)
             self.write('(')

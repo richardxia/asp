@@ -3,8 +3,13 @@ import java.util.ArrayList;
 import spark._
 import SparkContext._
 import javro.scala_arr
+import javro.JAvroInter
 import line_count._
 import org.apache.hadoop.io._
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
 
 def formatEmail(vector: Array[String]): Email={
 
@@ -75,6 +80,7 @@ def parseModel(lines: Array[String]): Array[Array[Double]]={
     return models
 }
 
+/**
 def custom_dot(model:Array[Double], email:Email):Double={
 		var email_indices = email.get_vec_indices()
 		var email_weights = email.get_vec_weights()
@@ -88,8 +94,9 @@ def custom_dot(model:Array[Double], email:Email):Double={
 		}
 		return total
 }
+**/
 
-def custom_dot(model: GenericData.Array, email: Email): Double ={
+def custom_dot(model: GenericData.Array[Float], email: Email): Double ={
 		var email_indices = email.get_vec_indices()
 		var email_weights = email.get_vec_weights()
 		var total =0.0
@@ -122,9 +129,9 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     //val modelFile = sc.textFile("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/")
     //val models = sc.broadcast(parseModel(modelFile.collect()))
     
-    val distModels =sc.sequenceFile[Int, ArrayPrimitiveWritable](model_filename)
+    //val distModels =sc.sequenceFile[Int, ArrayPrimitiveWritable](model_filename)
     //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get()}).collect())
-    var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get().asInstanceOf[Array[Double]]}).collect())
+    //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get().asInstanceOf[Array[Double]]}).collect())
 
 
 
@@ -177,7 +184,7 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     		subsamp_vec(i).weight = subsamp_weights(i)
     	}
 
-    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, models.value))
+    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, 472))
 
     }).groupByKey().map(bootstrap_estimates =>{
     	val funcs = new run_outer_data()

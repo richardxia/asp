@@ -260,11 +260,12 @@ public class JAvroInter{
 	}
 	
 	public DataFileReader<GenericRecord> readModel(String filename)throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
+		
 		File file = new File(filename);
 		DatumReader<GenericRecord> reader = new GenericDatumReader<GenericRecord>();
 		GenericRecord record;
 		DataFileReader<GenericRecord> dataFileReader = new DataFileReader<GenericRecord>(file,reader);
-	
+
 		return dataFileReader;
 	}
 	/**
@@ -289,8 +290,8 @@ public class JAvroInter{
 	 * returns the item in stored at the specified index.
 	 */
 	
-	public <T> T returnStored(int index){
-
+	public <T> T returnStored(int index) throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
+		readAvroFile();
 		Object item = stored[index];
 		String name = item.getClass().getName();
 		if (name == "org.apache.avro.generic.GenericData$Array"){
@@ -303,13 +304,15 @@ public class JAvroInter{
 		else{
 			return (T)stored[index];
 		}
+
 	}
 	
 	/**
 	 * returns the whole array stored
 	 */
 	
-	public Object[] returnStored(){
+	public Object[] returnStored() throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
+		readAvroFile();
 		return stored;
 	}
 	

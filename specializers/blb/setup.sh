@@ -49,7 +49,13 @@ mkdir ~/avro/org/apache/hadoop
 mkdir ~/avro/org/apache/hadoop/io
 mv ~/sejits/asp/hadoop/A* ~/avro/org/apache/hadoop/io
 
-~/mesos-ec2/copy-dir ~/avro
+cp -r ~/avro/ /root/scala-2.9.1.final 
+mv /root/scala-2.9.1.final/avro/* ..
+
+cp -r ~/sejits/asp/avroInter/ /root/scala-2.9.1.final
+mv /root/scala-2.9.1.final/avroInter/* ..
+
+~/mesos-ec2/copy-dir /root/scala-2.9.1.final/
 
 cd ~/sejits/asp/specializers/blb
 chmod +x test.sh
