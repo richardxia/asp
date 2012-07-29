@@ -44,6 +44,8 @@ echo "export MASTER=master@$(curl -s http://169.254.169.254/latest/meta-data/pub
 source ~/.bash_profile
 
 
+
+
 cd ~
 wget http://sourceforge.net/projects/s3tools/files/latest/download?source=files
 unzip s3cmd-1.1.0-beta3.zip
@@ -51,10 +53,13 @@ cd s3cmd-1.1.0-beta3
 ./s3cmd --configure
 AKIAJVLVU3XLP4GLMFEA
 xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy
-./s3cmd get s3://halfmilEmail/...
+
+./s3cmd get s3://halfmilEmail/p113kmodel.avro
 mkdir ~/models
-mv .. ~/models
+mv p113kmodel.avro ~/models
 ~/mesos-ec2/copy-dir /root/models
+
+
 
 cd ~/sejits/asp/avroInter
 javac -d ../avroInter/ JAvroInter.java

@@ -37,7 +37,7 @@ def formatEmail(vector: Array[String]): Email={
 	return em
 }
 
-def custom_dot(model: GenericData.Array[Float], email: Email): Double ={
+def custom_dot(model: ArrayList[Float], email: Email): Double ={
 		var email_indices = email.get_vec_indices()
 		var email_weights = email.get_vec_weights()
 		var total =0.0
@@ -46,7 +46,7 @@ def custom_dot(model: GenericData.Array[Float], email: Email): Double ={
 		for (i <- Range(0, email_indices.length)){
 			index = email_indices(i)
 			weight = email_weights(i)
-			total += model.get(index-1).asInstanceOf[Float] * weight
+			total += model.get(index-1) * weight
 		}
 		return total
 }
@@ -74,6 +74,13 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get()}).collect())
     //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get().asInstanceOf[Array[Double]]}).collect())
 
+
+    var reader =(new JAvroInter("res.avro", "args.avro")).readModel("/root/models/model.avro")
+    var models_arr = List[java.util.ArrayList[Float]]()
+    for (i <- Range(0, 3)){
+        models_arr = models_arr :+ new ArrayList(reader.next().get(1).asInstanceOf[org.apache.avro.generic.GenericData.Array[Float]].asInstanceOf[java.util.List[Float]])
+   }
+    var models = sc.broadcast(models_arr)
 
 
     var subsamps = distEmails.flatMap(email =>{
@@ -125,7 +132,7 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     		subsamp_vec(i).weight = subsamp_weights(i)
     	}
 
-    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, 472))
+    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, 3, models.value))
 
     }).groupByKey().map(bootstrap_estimates =>{
     	val funcs = new run_outer_data()

@@ -8,39 +8,19 @@ should create an "email" class in python as well
 from avroInter.PyAvroInter import *
 
 class SVMVerifierBLB(BLB):
-    """
-    def compute_estimate(emails, models):
+
+    def compute_estimate(emails, num_classes, models):
         errors =0.0
         num_emails = 0
+        size = len(models)
         for email in emails:
             weight = email.get_weight()
             num_emails += weight
             tag = email.get_tag()
             choice = 0
             max_match = -1.0
-            for i in range(len(models)):
-                model = models[i]
-                total = custom_dot(model, email)
-                if total > max_match:
-                    choice = i + 1
-                    max_match = total    
-            if choice != tag:
-                errors += weight 
-                
-        return errors / num_emails
-    """
-    def compute_estimate(emails, num_classes):
-        errors =0.0
-        num_emails = 0
-        model_reader = read_avro_file('/root/models/p113kmodel.avro')
-        for email in emails:
-            weight = email.get_weight()
-            num_emails += weight
-            tag = email.get_tag()
-            choice = 0
-            max_match = -1.0
-            for i in range(num_classes):
-                model = model_reader.next()
+            for i in range(size):
+                model = models.apply(i)
                 total = custom_dot(model, email)
                 if total > max_match:
                     choice = i + 1
