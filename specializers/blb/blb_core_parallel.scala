@@ -37,51 +37,56 @@ def formatEmail(vector: Array[String]): Email={
 	return em
 }
 
+
 def custom_dot(model: ArrayList[Float], email: Email): Double ={
-		var email_indices = email.get_vec_indices()
-		var email_weights = email.get_vec_weights()
-		var total =0.0
-		var index = 0
-		var weight = 0
-		for (i <- Range(0, email_indices.length)){
-			index = email_indices(i)
-			weight = email_weights(i)
-			total += model.get(index-1) * weight
-		}
-		return total
+           var email_indices = email.get_vec_indices()
+                var email_weights = email.get_vec_weights()
+                var total =0.0
+                var email_index = 0.0
+                var email_weight = 0.0
+                var model_index = -1.0
+                var model_weight =0.0
+                var model_index_counter = -2
+
+                for (i <- Range(0, email_indices.length)){
+
+                        email_index = email_indices(i)
+                        while (model_index < email_index && model_index_counter+2 < model.size){
+                                model_index_counter += 2
+                                model_index = model.get(model_index_counter)
+                        }
+                        if (model_index == email_index){
+                                email_weight = email_weights(i)
+                                model_weight = model.get(model_index_counter+1)
+                                total += email_weight * model_weight
+                        }
+                }
+                return total
+
 }
 
 def run(email_filename: String, model_filename:String, DIM: Int, 
 			num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
 	
+	System.setProperty("spark.default.parallelism", 32) // or num_nodes * num_cores/node
 	val sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
 	val bnum_bootstraps = sc.broadcast(num_bootstraps)
 	val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
 	val bnum_subsamples = sc.broadcast(num_subsamples)
 
     var distEmails = sc.sequenceFile[Int, String](email_filename)
-    //var distEmails = sc.sequenceFile[Int, String]("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeEmail/")
     
     val num_emails = distEmails.count().asInstanceOf[Int]
     val bnum_emails = sc.broadcast(num_emails)
     val rand_prob = sc.broadcast(math.pow(num_emails, subsample_len_exp)/num_emails)
 
-    //val modelFile = sc.textFile(model_filename)
-    //val modelFile = sc.textFile("s3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/")
-    //val models = sc.broadcast(parseModel(modelFile.collect()))
-    
-    //val distModels =sc.sequenceFile[Int, ArrayPrimitiveWritable](model_filename)
-    //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get()}).collect())
-    //var models =sc.broadcast(distModels.map(mod_vec => {mod_vec._2.get().asInstanceOf[Array[Double]]}).collect())
 
-
-    var reader =(new JAvroInter("res.avro", "args.avro")).readModel("/root/models/model.avro")
+    var reader =(new JAvroInter("res.avro", "args.avro")).readModel("/root/models/comp113kmodel.avro")
     var models_arr = List[java.util.ArrayList[Float]]()
-    for (i <- Range(0, 3)){
+    while (reader.hasNext()){
         models_arr = models_arr :+ new ArrayList(reader.next().get(1).asInstanceOf[org.apache.avro.generic.GenericData.Array[Float]].asInstanceOf[java.util.List[Float]])
    }
     var models = sc.broadcast(models_arr)
-
 
     var subsamps = distEmails.flatMap(email =>{
     	val gen = new java.util.Random()
@@ -98,12 +103,15 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     		subsamp_count += 1
     	}
     	outputs  	
-    }).groupByKey()
+    }).groupByKey().cache()
+    //call .cache() right here
+    // call .count() maybe here to force evaluation
 
     // --> (Subsamp Id, subsample) --> (Int, Seq[Email])
 
     //assuming DIM=1 in map
 
+    // 
     var subsamps_out = subsamps.flatMap(subsamp => {
     				//List (subsamp id, subsample) --> (subsample#, Seq(emails))
     	var outputs = List[(Int, Seq[Email])]()
@@ -114,8 +122,10 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     }).map(subsamp => {
     	val funcs = new run_outer_data()
     	val subsamp_id = subsamp._1
-    	var subsamp_vec = subsamp._2
-  
+    	//convert into indexed seq, or even array .toIndexedSeq()
+    	var subsamp_vec = subsamp._2.toIndexedSeq
+
+
     	val gen = new java.util.Random()
     	var email =""
     	var estimate = 0.0
@@ -128,11 +138,13 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     		//subsamp_vec(gen.nextInt(len)).weight += 1
     	}
     	
+    	//for (temp <- subsamp_vec zip subsamp_weights)
     	for (i <- Range(0, subsamp_weights.length)){
+    		//don't index into subsamp_vec
     		subsamp_vec(i).weight = subsamp_weights(i)
     	}
 
-    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, 3, models.value))
+    	(subsamp_id, funcs.compute_estimate(subsamp_vec.toList, models.value))
 
     }).groupByKey().map(bootstrap_estimates =>{
     	val funcs = new run_outer_data()

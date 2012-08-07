@@ -172,7 +172,9 @@ public class JAvroInter{
 		dataFileWriter.append(datum);
 		dataFileWriter.close();		
 	}	
-		
+	
+	
+	
     public void writeModel(String filename, int num_vecs) throws IOException{
 
         String s= this.makeModelSchema(1);
@@ -185,7 +187,7 @@ public class JAvroInter{
          int count = 1;
          int classes_num = 0;
          int features_num = 0;
-         int num =0;
+         int num = 0;
          float weight =new Float(0.0);
          String[] concat_model;
          while(count < 15)
@@ -200,56 +202,64 @@ public class JAvroInter{
                  count += 1;
          }
 
-        String elem = "";
-        char c;
-        int class_count =0;
-        int elem_counter = 0;
-        int i;
+    String elem = "";
+    char c;
+    int class_count =0;
+    int elem_counter = 0;
+    int i;
 
-        GenericRecord datum = new GenericData.Record(schema);
-        datum.put("size", features_num);
-        DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
-        DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
-        File file = new File(OUTPUT_FILE_NAME);
+    GenericRecord datum = new GenericData.Record(schema);
+    DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
+    DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(writer);
+    File file = new File(OUTPUT_FILE_NAME);
 
-        dataFileWriter.create(schema, file);
+    dataFileWriter.create(schema, file);
 
-        List<Float> vec = new ArrayList<Float>(Collections.nCopies(33, new Float(0.0)));
+    List<Float> vec = new ArrayList<Float>();
 
-        datum = new GenericData.Record(schema);
-        datum.put("size", features_num);
+    datum = new GenericData.Record(schema);
+    datum.put("size", features_num);
 
-        vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
-        while ((i=buffer.read())!= -1){
-                c = (char)i;
-                if (c != ' '){
-                        elem += c;
-                }else{
-                        if (elem_counter !=0 && elem_counter != 1 && !elem.equals("#")){
-                                num = Integer.parseInt(elem.substring(0, elem.indexOf(':')));
-                                weight =  java.lang.Float.parseFloat(elem.substring(elem.indexOf(':')+1, elem.length()));
-                                vec.set((num-1)%features_num, weight);
-                                if ((num) / features_num > class_count){
-                                    datum.put("arg1", vec);
-                                    dataFileWriter.append(datum);
-                                    datum = new GenericData.Record(schema);
-                                    datum.put("size", features_num);
-                                    System.out.println("count is:" + class_count);
-                                    vec = new ArrayList<Float>(Collections.nCopies(features_num, new Float(0.0)));
-                         class_count += 1;
-                      }
-                    }
-                    elem_counter += 1;
-                    elem = "";
-            }
-            }
-
-        dataFileWriter.close();
-
+    List<Float> pair;
+    vec = new ArrayList<Float>();
+    while ((i=buffer.read())!= -1){
+            c = (char)i;
+            if (c != ' '){
+                    elem += c;
+            }else{
+                    if (elem_counter !=0 && elem_counter != 1 && !elem.equals("#")){
+                            num = Integer.parseInt(elem.substring(0, elem.indexOf(':')));
+                            weight =  java.lang.Float.parseFloat(elem.substring(elem.indexOf(':')+1, elem.length()));
+                            pair = new ArrayList<Float>();
+                            //((ArrayList)pair).add(num);
+                            //((ArrayList)pair).add(weight);
+                            ((ArrayList)vec).add(new Float((num-1)%features_num+1));
+                            ((ArrayList)vec).add(weight);
+                            if ((num) / features_num > class_count){
+                                datum.put("arg1", vec);
+                                dataFileWriter.append(datum);
+                                datum = new GenericData.Record(schema);
+                                datum.put("size", features_num);
+                                System.out.println("count is:" + class_count);
+                                System.out.println("num is:"+ num + "with fn: "+ features_num + "and num/fn is:"+ num/features_num);
+                                vec = new ArrayList<Float>();
+                     class_count += 1;
+                  }
+                }
+                elem_counter += 1;
+                elem = "";
+        }
+        }
+    if ( !((num/features_num) > class_count)){
+        datum.put("arg1", vec);
+        dataFileWriter.append(datum);
     }
 
-                                
-                               
+    dataFileWriter.close();
+
+}
+
+                       
                                 
 	public void readAvroFile() throws IOException, ClassNotFoundException, IllegalAccessException,InstantiationException{
 		File file = new File(INPUT_FILE_NAME);

@@ -54,9 +54,12 @@ cd s3cmd-1.1.0-beta3
 AKIAJVLVU3XLP4GLMFEA
 xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy
 
-./s3cmd get s3://halfmilEmail/p113kmodel.avro
+./s3cmd get s3://halfmilEmail/comp250kmodel.avro
+./s3cmd get s3://halfmilEmail/comp113kmodel.avro
+
 mkdir ~/models
-mv p113kmodel.avro ~/models
+mv comp* ~/models
+
 ~/mesos-ec2/copy-dir /root/models
 
 

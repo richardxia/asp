@@ -28,7 +28,7 @@ class ScalaFunction:
 
         #doesnt work on local
         class_path = prefix +':'+self.source_dir + ':/root/sejits/asp/avroInter'
-        os.system('~/sejits/asp/asp/jit/make_jar '+ self.source_dir)
+        os.system('root/sejits/asp/asp/jit/make_jar '+ self.source_dir)
         #p = Popen('/root/sejits/asp/asp/jit/make_jar'+self.source_dir, shell=True)
         #p.wait()
         """

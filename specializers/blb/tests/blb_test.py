@@ -9,7 +9,7 @@ from avroInter.PyAvroInter import *
 
 class SVMVerifierBLB(BLB):
 
-    def compute_estimate(emails, num_classes, models):
+    def compute_estimate(emails, models):
         errors =0.0
         num_emails = 0
         size = len(models)
