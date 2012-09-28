@@ -9,7 +9,9 @@ from avroInter.PyAvroInter import *
 
 class SVMVerifierBLB(BLB):
 
-    def compute_estimate(emails, models):
+    def compute_estimate(btstrap_data):
+        emails = btstrap_data.emails
+        models = btstrap_data.models
         errors =0.0
         num_emails = 0
         size = len(models)
@@ -51,10 +53,10 @@ class SVMVerifierBLBTest(unittest.TestCase):
 
     def test(self):
         data = tuple([i*1.0 for i in xrange(5000)])
-        test_blb = SVMVerifierBLB(25, 50, .5, use_scala=True)    
+        test_blb = SVMVerifierBLB(25, 50, .6, use_scala=True)    
            
         result = test_blb.run('s3n://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@halfmilEmail/seq113ktest',\
-                               's3://AKIAJVLVU3XLP4GLMFEA:xZtDvTF5z0QYx5pZ8gI9KoSpcPHfKarUiNXDKGhy@largeModel/')
+                              '/root/models/comp113kmodel.avro')
         print 'FINAL RESULT IS:', result  
         self.assertTrue(abs(result - len(data)/2) < len(data)/90)
 

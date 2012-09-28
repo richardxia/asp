@@ -45,7 +45,6 @@ source ~/.bash_profile
 
 
 
-
 cd ~
 wget http://sourceforge.net/projects/s3tools/files/latest/download?source=files
 unzip s3cmd-1.1.0-beta3.zip
@@ -63,7 +62,6 @@ mv comp* ~/models
 ~/mesos-ec2/copy-dir /root/models
 
 
-
 cd ~/sejits/asp/avroInter
 javac -d ../avroInter/ JAvroInter.java
 
@@ -73,6 +71,7 @@ cp -r ~/sejits/asp/avroInter/* /root/avro
 cd ~/sejits/asp/specializers/blb
 chmod +x test.sh
 
+scalac custom_data.scala
 chmod +x ~/sejits/asp/asp/jit/make_jar
 
 

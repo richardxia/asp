@@ -363,6 +363,7 @@ class SourceGenerator(NodeVisitor):
             self.visit(node.func)
             self.write('(')
             comma = False
+            print 'node.args are:' , node.args
             for a in node.args:
                 if comma: self.write(', ')
                 self.visit(a)

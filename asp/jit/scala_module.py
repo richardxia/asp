@@ -11,46 +11,29 @@ class ScalaFunction:
     
     def find_close(self,str):
         index = len(str)-1
-        print 'index is:',index
-        print 'str len is:', len(str)
         char = str[index]
         
         while (char!=']'):
             index -=1
             char = str[index]
-        return index
- 
+        return index 
 
     def __call__(self, *args, **kwargs):
         write_avro_file(args, 'args.avro')
-        #class_path =self.source_dir  + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'#':../../avroInter:'
         prefix = os.environ['CLASSPATH']
-
-        #doesnt work on local
         class_path = prefix +':'+self.source_dir + ':/root/sejits/asp/avroInter'
-        os.system('root/sejits/asp/asp/jit/make_jar '+ self.source_dir)
-        #p = Popen('/root/sejits/asp/asp/jit/make_jar'+self.source_dir, shell=True)
-        #p.wait()
-        """
-        #local version
-        class_path = prefix +':'+self.source_dir + ':/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/avroInter'
-        os.system('/media/sf_share/users/pbirsinger/documents/research/asp_scala/asp_git/asp/jit/make_jar '+ self.source_dir)
-        """
+        
+        # make_jar should be edited so that source.jar contains all the necessary files 
+        # to be deployed to the slave nodes
+        os.system('/root/sejits/asp/asp/jit/make_jar '+ self.source_dir)     
         os.environ['FILE_LOC'] = self.source_dir + "/source.jar"
-
-        print 'CLASSPATH IS:', class_path
-        print 'SELF CLASSNAME IS:', self.classname
-        #out = os.system('~/spark/run -cp ' + class_path + ' ' + self.classname)
         out = subprocess.Popen('/root/spark/run -cp '+class_path + ' ' +self.classname, shell=True)
-        print 'about to wait'
         out.wait()
-        print 'done waiting'
         if out.returncode != 0:
             print "return code is:" , out.returncode
             raise Exception("Bad return code")
 
-        results = read_avro_file('results.avro')[0]
-        #print 'RESULTS:', results
+        results = read_avro_file('results.avro')[0]        
         os.remove('args.avro')
         os.remove('results.avro')
         return results
