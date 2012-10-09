@@ -9,8 +9,6 @@ from avroInter.PyAvroInter import *
 
 class SVMVerifierBLB(BLB):
 
-    #limiting factor in writing more of these is probably 
-    #my conversion from 
     def compute_estimate(btstrap_data):
         emails = btstrap_data.emails
         models = btstrap_data.models
@@ -34,7 +32,7 @@ class SVMVerifierBLB(BLB):
                 
         return errors / num_emails
     
-    #change this to std dev before making public
+    #change this to std dev before putting up w/ other specializers
     def reduce_bootstraps(bootstraps):
         mean = 0.0
         for bootstrap in bootstraps:
