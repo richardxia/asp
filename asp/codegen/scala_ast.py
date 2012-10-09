@@ -1,6 +1,4 @@
 import ast
-import codegen
-
 
 """
 I don't use the Generable class inheritance
@@ -222,7 +220,7 @@ class AugAssign(Generable):
 			return self
 		
 
-class Assign(Generable): #should this inherit from something else???
+class Assign(Generable): #should this inherit from something else??
 	def __init__(self, lvalue, rvalue):
 		##??
 		self.lvalue = lvalue
@@ -241,7 +239,6 @@ class Assign(Generable): #should this inherit from something else???
 			return self
 		
 		
-#for some reason is not an iterable?? needs to be a sequence
 class Compare(Generable):
 	def __init__(self, left,op,right):
 		self.left = left
@@ -278,7 +275,7 @@ class IfConv(Generable):
 			self.done = True
 			return self
 		
-class For(Generable): #??
+class For(Generable): 
 	def __init__(self, target, iter, body):
 		self.target = target
 		self.iter = iter
@@ -314,16 +311,5 @@ class While(Generable):
 	
 	
 if __name__ == '__main__':
-	f= open('times4.py')
-	rendered = f.read()
-	print 'RENDERED:', rendered
-	print 'DONE WITH RENDERED'
-	node = ast.parse(rendered)
-	str = ast.dump(node)
-	code = codegen.to_source(node)
-	print str
-	print 'CODE:'
-	print code
-	print 'DONE WITH CODE'
-	print 'heres num:', node.n
+	pass
 

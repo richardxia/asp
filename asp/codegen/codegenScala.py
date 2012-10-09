@@ -1,6 +1,5 @@
 from ast import *
 from ast_tools import *
-import codegen
 import scala_ast
 
 BOOLOP_SYMBOLS = {
@@ -98,7 +97,6 @@ def getArrType(elmts, for_schema = True):
         
 
 def convert_types(input_type):
-    #print 'CONVERT TYPES CALLED WITH :'+ str(input_type)
     if len(input_type) == 2 and input_type[0] == 'array':
         #return 'org.apache.avro.generic.GenericData.Array[%s]' % (convert_types(input_type[1]))
         return 'Array[%s]' %(convert_types(input_type[1]))
@@ -178,7 +176,6 @@ class SourceGenerator(NodeVisitor):
             #convert types somewhere?
             scala_arg_types, scala_ret_type = [],[]
             for arg in func[1]:
-                print 'ARG IS-----------:' + str(arg)
                 scala_arg_types.append(convert_types(arg))
             scala_ret_type = convert_types(func[2])
             self.types[name] = [scala_arg_types, scala_ret_type]    
@@ -215,9 +212,6 @@ class SourceGenerator(NodeVisitor):
     def visit_BoolOp(self,node):
         self.newline(node)
         self.write('(')
-        self.write('ADSFASDFASDFASDFDSF')
-        print 'NODE OP IS:' , node.op
-        print 'NODE OP TYPE IS:' , type(node.op)
         op = BOOLOP_SYMBOLS[type(node.op)]             
         self.visit(node.values[0])
         if op == 'and':
@@ -363,7 +357,6 @@ class SourceGenerator(NodeVisitor):
             self.visit(node.func)
             self.write('(')
             comma = False
-            print 'node.args are:' , node.args
             for a in node.args:
                 if comma: self.write(', ')
                 self.visit(a)

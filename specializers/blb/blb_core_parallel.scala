@@ -4,7 +4,6 @@ import spark._
 import SparkContext._
 import javro.scala_arr
 import javro.JAvroInter
-import line_count._
 import org.apache.hadoop.io._
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericDatumReader;
@@ -61,7 +60,6 @@ def custom_dot(model: ArrayList[Float], email: Email): Double ={
     var model_index_counter = -2
 
     for (i <- Range(0, email_indices.length)){
-
             email_index = email_indices(i)
             while (model_index < email_index && model_index_counter+2 < model.size){
                     model_index_counter += 2
@@ -81,13 +79,14 @@ def run(email_filename: String, model_filename:String, DIM: Int,
 	
 	System.setProperty("spark.default.parallelism", "32") // often num_nodes * num_cores/node
 
-	// FILE_LOC is set to the file_path of the jar containing the necessary files, 
+	// FILE_LOC is set to the file_path of the jar containing the necessary files in /asp/jift/scala_module.py 
 	val sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))
 	val bnum_bootstraps = sc.broadcast(num_bootstraps)
 	val bsubsample_len_exp = sc.broadcast(subsample_len_exp)
 	val bnum_subsamples = sc.broadcast(num_subsamples)
 
 	// read data from file to be operated on
+	// data needn't necessarily be from a sequence file
     var distData = sc.sequenceFile[Int, String](email_filename)
     var reader =(new JAvroInter("res.avro", "args.avro")).readModel(model_filename)
     var models_arr = List[java.util.ArrayList[Float]]()
@@ -135,7 +134,6 @@ def run(email_filename: String, model_filename:String, DIM: Int,
     	val subsamp_id = subsamp._1
     	//convert into indexed seq, or even array .toIndexedSeq()
     	var subsamp_vec = subsamp._2.toIndexedSeq
-
 
     	val gen = new java.util.Random()
     	var email =""

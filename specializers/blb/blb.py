@@ -69,7 +69,6 @@ class BLB:
         elif self.use_scala: 
             mod = asp_module.ASPModule(cache_dir = "/root/spark/examples/target/scala-2.9.1.final/classes/", use_scala=True)
                                                                       
-            #obtain python AST of input functions
             scala_estimate= ast_tools.ConvertPyAST_ScalaAST().visit(self.estimate_ast) 
             scala_reduce = ast_tools.ConvertPyAST_ScalaAST().visit(self.reduce_ast)
             scala_average =  ast_tools.ConvertPyAST_ScalaAST().visit(self.average_ast)
@@ -87,11 +86,7 @@ class BLB:
             #NOTE: must append outer to function name above to get the classname 
             # because of how scala_object created by avro_backend           
             mod.add_function("run_outer", rendered, backend = "scala")   
-        
-            """
-            print 'FULLY RENDERED SCALA CODE:', rendered
-            print '-------------------------------------------------------------'
-            """
+            
             email_filename = data[0]
             model_filename = data[1]
             return mod.run_outer(email_filename, model_filename, self.dim, self.num_subsamples, self.num_bootstraps, self.subsample_len_exp)            
