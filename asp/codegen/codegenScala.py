@@ -134,13 +134,13 @@ class SourceGenerator(NodeVisitor):
     def convert_types(self,input_type):
         if len(input_type) == 2 and input_type[0] == 'array':
             #return 'org.apache.avro.generic.GenericData.Array[%s]' % (convert_types(input_type[1]))
-            return 'Array[%s]' %(convert_types(input_type[1]))
+            return 'Array[%s]' %(self.convert_types(input_type[1]))
         elif len(input_type) == 2 and input_type[0] == 'list':
-            return 'List[%s]' %(convert_types(input_type[1]))
+            return 'List[%s]' %(self.convert_types(input_type[1]))
         elif len(input_type) == 3 and input_type[0] == 'tuple':
             str = '('
             for x in input_type[1:]:
-                str += convert_types(x) +','
+                str += self.convert_types(x) +','
             return str[0:-1] + ')'
         
         elif input_type in TYPES:

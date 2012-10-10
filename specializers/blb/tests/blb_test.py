@@ -2,13 +2,9 @@ import unittest
 
 from blb import BLB
 
-"""
-should create an "email" class in python as well
-"""
 from avroInter.PyAvroInter import *
 
 class SVMVerifierBLB(BLB):
-
     def compute_estimate(btstrap_data):
         emails = btstrap_data.emails
         models = btstrap_data.models
@@ -22,14 +18,13 @@ class SVMVerifierBLB(BLB):
             choice = 0
             max_match = -1.0
             for i in range(size):
-                model = models.apply(i)
+                model = models[i]  
                 total = custom_dot(model, email)
                 if total > max_match:
                     choice = i + 1
                     max_match = total    
             if choice != tag:
-                errors += weight 
-                
+                errors += weight                
         return errors / num_emails
     
     #change this to std dev before putting up w/ other specializers

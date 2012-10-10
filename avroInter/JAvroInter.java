@@ -364,22 +364,6 @@ public class JAvroInter{
 	
 	public static void main(String[] args) throws IOException, IllegalAccessException, ClassNotFoundException, InstantiationException{
 		
-		try{
-
-		JAvroInter j = new JAvroInter("p113kmodel.avro", "args.avro");
-		/**
-		j.writeModel("p113kmodel", 2);
-		 **/
-		
-		DataFileReader<GenericRecord> dataFileReader = j.readModel("p113kmodel.avro");
-		
-		GenericRecord record = dataFileReader.next();
-		System.out.println("record is:" + record);
-		}
-		catch(IOException ioe){
-			System.out.println("caught urrror: "+ ioe);
-		}
 		
 	}
 }
-
