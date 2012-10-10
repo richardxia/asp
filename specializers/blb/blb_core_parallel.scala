@@ -10,7 +10,9 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 
-//converts email from string format into actual Email class
+/**
+*  converts email from string format into actual Email class
+**/
 def formatEmail(input: String): Email={
 	var vector = input.split(" ")
 	var em = new Email()
@@ -38,8 +40,8 @@ def formatEmail(input: String): Email={
 }
 
 /**
-* formatting of the input data can be done here
-* note that the input types may have to be adjusted 
+*  formatting of the input data can be done here
+*  note that the input types may have to be adjusted 
 **/
 def formatInputItem(input: String): Email={
 	return formatEmail(input)
@@ -77,7 +79,7 @@ def custom_dot(model: ArrayList[Float], email: Email): Double ={
 def run(email_filename: String, model_filename:String, DIM: Int, 
 			num_subsamples:Int, num_bootstraps:Int, subsample_len_exp:Double):Double={
 	
-	System.setProperty("spark.default.parallelism", "32") // often num_nodes * num_cores/node
+	System.setProperty("spark.default.parallelism", "32")// probably want to set to num_nodes * num_cores/node
 
 	// FILE_LOC is set to the file_path of the jar containing the necessary files in /asp/jift/scala_module.py 
 	val sc = new SparkContext(System.getenv("MASTER"), "Blb", "/root/spark", List(System.getenv("FILE_LOC")))

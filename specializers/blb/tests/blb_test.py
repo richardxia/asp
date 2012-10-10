@@ -27,13 +27,27 @@ class SVMVerifierBLB(BLB):
                 errors += weight                
         return errors / num_emails
     
-    #change this to std dev before putting up w/ other specializers
+    #calculates average error estimate
     def reduce_bootstraps(bootstraps):
         mean = 0.0
         for bootstrap in bootstraps:
             mean += bootstrap
         return mean / len(bootstraps)
-
+    
+    """
+    #calculates stddev on error estimates
+    def reduce_bootstraps(bootstraps):
+        mean = 0.0
+        for bootstrap in bootstraps:
+            mean += bootstrap
+        mean = mean / len(bootstraps)
+        squared_dif =0.0
+        for bootstrap in bootstraps:           
+            squared_dif += (mean-bootstrap) * (mean-bootstrap)
+            print 'squr dif is:', (mean-bootstrap) * (mean-bootstrap)
+        return (squared_dif  / (len(bootstraps)-1)) ** .5
+    """
+        
     def average(subsamples):
         mean = 0.0
         for subsample in subsamples:
